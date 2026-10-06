@@ -9,3 +9,6 @@
 # Sistema / dependencias
 .DS_Store
 node_modules/
+
+# Excepción: plantilla de referencia (solo filas de ejemplo, sin datos de clientes)
+!docs/plantilla_referencia_*.xlsx
