@@ -218,7 +218,10 @@ button.btn.on{border-color:#7b3fe4;color:#7b3fe4;background:rgba(123,63,228,.08)
 .fb-tab.on{background:var(--ink);color:var(--bg);border-color:var(--ink)}
 .pv{padding:14px 16px;font-size:14px}
 .pv-sec{font-size:15px;margin:14px 0 8px;padding-bottom:4px;border-bottom:1px solid var(--line)}
-.pv-sec:first-child{margin-top:0}
+.pv-s:first-child>.pv-sec{margin-top:0}
+#tp-form [hidden]{display:none!important}
+.pv-slots{display:flex;gap:6px}
+.pv-slots input{flex:1;min-width:0}
 .pv-f{display:grid;gap:4px;margin-bottom:10px}
 .pv-f>span{font-size:13px;font-weight:500}
 .pv-f em{font-weight:400;color:var(--muted);font-style:normal;font-size:12px}
@@ -300,7 +303,12 @@ button.btn.on{border-color:#7b3fe4;color:#7b3fe4;background:rgba(123,63,228,.08)
 .rn-box.fb.hit{outline:3px solid #e38b00;outline-offset:1px;z-index:2}
 .rn-box.flash{animation:fl .9s}
 @keyframes fl{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 6px rgba(227,139,0,.6)}}
-.f2sub{font:600 12px var(--sans);color:#7b3fe4;padding:8px 10px 2px 30px;text-transform:uppercase;letter-spacing:.04em}
+.f2sub{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 10px 2px 30px}
+.f2sub-t{all:unset;cursor:pointer;font:600 12px var(--sans);color:#7b3fe4;text-transform:uppercase;letter-spacing:.04em}
+.f2sub-t:focus-visible,.f2fold:focus-visible{outline:2px solid #7b3fe4;outline-offset:2px}
+.f2sub .cnt{margin-left:auto}
+.cchip.rev{background:rgba(214,120,0,.14);color:#8a4b00}
+.rsel{font:11px var(--sans);margin-left:4px;padding:0 2px;max-width:110px}
 .hidb{font:600 10px var(--mono);background:var(--soft);color:var(--muted);border:1px dashed var(--muted);border-radius:4px;padding:1px 5px}
 .mini.hid{background:var(--soft);border-style:dashed}
 .cchip{font:12px var(--sans);background:rgba(123,63,228,.12);color:#5b2db8;border-radius:4px;padding:1px 6px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -702,7 +710,7 @@ async function rnLoad(bytes,file){
     rn.rows=rnSuggest(rn.data);
     if(!rn.rows.length){m.textContent="Este PDF no tiene casilleros (AcroForms). Hay que agregarlos antes de renombrar.";$("#rn-list").innerHTML="";await rnRender();rnStats();return}
     $("#rn-file").textContent=file;
-    rn.sel=0;rn.multi.clear();if(typeof TP!=="undefined"){TP.vals={};TP.count={};TP.codes={};TP.first=false}if(typeof ST!=="undefined"){ST.Q=[];ST.S=[];ST.selQ=null;ST.open=null;ST.pdfDone=false;const fp=document.getElementById("fb-pdf");if(fp)fp.innerHTML=""}await rnRender();rnList();rnSelect(0,false);rnStats();
+    rn.sel=0;rn.multi.clear();if(typeof TP!=="undefined"){TP.vals={};TP.count={};TP.codes={};TP.slots={};TP.first=false}if(typeof ST!=="undefined"){ST.Q=[];ST.S=[];ST.coll=new Set();ST.selQ=null;ST.open=null;ST.pdfDone=false;const fp=document.getElementById("fb-pdf");if(fp)fp.innerHTML=""}await rnRender();rnList();rnSelect(0,false);rnStats();
     m.textContent="";
   }catch(e){m.textContent="No se pudo leer ese PDF. Si tiene contraseña, quitala y probá de nuevo."}
 }
@@ -882,7 +890,7 @@ $("#rn-csv").addEventListener("click",()=>{
 });
 
 /* ── Pasos ── */
-const ST={cur:0,json:null,paths:[],Q:[],S:[],selQ:null,open:null,activeS:null,nid:1,pdfDone:false,view2:"all"};
+const ST={cur:0,json:null,paths:[],Q:[],S:[],selQ:null,open:null,activeS:null,nid:1,pdfDone:false,view2:"all",coll:new Set()};
 function goStep(n){
   ST.cur=n;
   [0,1,2,3].forEach(k=>{$("#st"+k).hidden=k!==n});
@@ -987,14 +995,33 @@ const fbQ=id=>ST.Q.find(q=>q.id===id);
 const fbParts=q=>ST.Q.filter(x=>x.parentId===q.id);
 const fbOwner=i=>ST.Q.find(q=>q.boxes.includes(i));
 const qToks=q=>fbToks(secTitle(q.sid)+" "+q.label);
-function fbOrdered(){return ST.S.flatMap(s=>ST.Q.filter(q=>q.sid===s.id))}
+const fbRoot=q=>q.parentId?(fbQ(q.parentId)||q):q;
+const fbRootSub=q=>fbRoot(q).sub||"";
+function fbNewSub(title){return{title,hidden:false,rep:0,cond:null,condTxt:"",notes:""}}
+/* Sección y subsección de una pregunta; "hidden" = no se le muestra a la persona */
+function fbArea(q){const r=fbRoot(q);const s=ST.S.find(x=>x.id===r.sid);const sub=s&&s.subs?s.subs.find(u=>u.title===(r.sub||""))||null:null;return{s,sub,hidden:!!((s&&s.hidden)||(sub&&sub.hidden)||r.oculto)}}
+const fbHiddenArea=q=>fbArea(q).hidden;
+/* Orden del formulario: sección → subsección (orden de s.subs) → orden en ST.Q */
+function fbOrdered(){return ST.S.flatMap(s=>{const subs=["",...(s.subs||[]).map(u=>u.title)];const rk=q=>Math.max(0,subs.indexOf(fbRootSub(q)));return ST.Q.map((q,i)=>[q,i]).filter(([q])=>q.sid===s.id).sort((a,b)=>rk(a[0])-rk(b[0])||a[1]-b[1]).map(x=>x[0])})}
 function fbNorm(){
-  ST.Q.forEach(q=>{
-    const par=q.parentId?fbQ(q.parentId):null;
-    if(par){q.sid=par.sid;q.repeat=par.repeat}
-    const nb=(par||q).boxes.length;
-    q.rep=q.repeat?(nb||5):0;
-  });
+  ST.S.forEach(s=>{if(!Array.isArray(s.subs))s.subs=[]});
+  ST.S.sort((a,b)=>(b.hidden?1:0)-(a.hidden?1:0));
+  ST.Q.forEach(q=>{if(q.parentId||!q.sub)return;const s=ST.S.find(x=>x.id===q.sid);if(s&&!s.subs.some(u=>u.title===q.sub))s.subs.push(fbNewSub(q.sub))});
+  ST.Q.filter(q=>!q.parentId).forEach(q=>{const{sub}=fbArea(q);const sr=sub&&+sub.rep>0?+sub.rep:0;
+    if(sr){q.repeat=true;q._subRep=true}else if(q._subRep){q.repeat=false;delete q._subRep}
+    q.rep=q.repeat?(sr||q.boxes.length||5):0});
+  ST.Q.filter(q=>q.parentId).forEach(q=>{const par=fbQ(q.parentId);if(!par)return;q.sid=par.sid;q.repeat=par.repeat;q.rep=par.rep});
+}
+/* Fecha en 3 casilleros y preguntas que en el PDF van partidas («En el PDF va partido en») */
+const fbSlots=q=>String(q.split||"").split("/").map(x=>x.trim()).filter(Boolean);
+function fbDateOrder(q){const sl=fbSlots(q).map(x=>{const k=fbSlug(x);return/^d/.test(k)?"dia":/^m/.test(k)?"mes":/^a/.test(k)?"ano":null});return sl.length===3&&sl.every(Boolean)&&new Set(sl).size===3?sl:["dia","mes","ano"]}
+function fbRoleOpts(q){if(q.boxes.length<2)return null;if(q.type==="Fecha")return[["dia","día"],["mes","mes"],["ano","año"]];const sl=fbSlots(q);return sl.length>=2?sl.map(x=>[x,x]):null}
+const fbRoleLabel=(q,v)=>q.type==="Fecha"?({dia:"día",mes:"mes",ano:"año"})[v]||v:v;
+function fbRoleOf(q,i,autoOnly){
+  if(!autoOnly&&q.roles&&q.roles[i]!=null)return q.roles[i];
+  const bs=[...q.boxes].sort((a,b)=>a-b);const k=bs.indexOf(i);
+  if(q.type==="Fecha"){const sfx=((rn.rows[i]&&rn.rows[i].nuevo.match(/_(dia|mes|ano)$/))||[])[1];if(sfx)return sfx;return bs.length===3?fbDateOrder(q)[k]:null}
+  const sl=fbSlots(q);return sl.length>=2?(sl[k]??null):null;
 }
 function fbSplitSuggest(label){
   const b=fbSlug(label);
@@ -1009,7 +1036,7 @@ function fbNewQ(label,sid,extra){
   const q=Object.assign({id:ST.nid++,sid:sid??f2ActiveSid(),label:label||"Nueva pregunta",type:fbType(fbSlug(label||""),"text"),req:true,boxes:[],opts:[],repeat:false,rep:0,json:null,jsonOk:false,sub:"",inPdf:true,cond:null,origin:"La completa la persona",fmt:"",maxLen:"",ex:"",notes:""},extra||{});
   ST.Q.push(q);return q;
 }
-function f2ActiveSid(){if(!ST.S.length)ST.S.push({id:ST.nid++,title:"Sección 1"});if(!ST.S.some(s=>s.id===ST.activeS))ST.activeS=ST.S[ST.S.length-1].id;return ST.activeS}
+function f2ActiveSid(){if(!ST.S.length)ST.S.push({id:ST.nid++,title:"Sección 1",subs:[]});if(!ST.S.some(s=>s.id===ST.activeS))ST.activeS=ST.S[ST.S.length-1].id;return ST.activeS}
 /* sugerencias */
 function f2SuggestJson(q){
   if(!ST.paths.length)return null;const used=new Set(ST.Q.filter(x=>x!==q&&x.json).map(x=>x.json));
@@ -1069,36 +1096,51 @@ function f2AddBox(q,i){
   const o=fbOwner(i);if(o&&o!==q){o.boxes=o.boxes.filter(x=>x!==i);o.opts.forEach(op=>{if(op.box===i)op.box=null})}
   if(!q.boxes.includes(i))q.boxes.push(i);
   const r=rn.rows[i];
+  if(q.type==="Fecha"||fbSlots(q).length>=2){q.roles=q.roles||{};if(q.roles[i]==null){const sfx=q.type==="Fecha"?(r.nuevo.match(/_(dia|mes|ano)$/)||[])[1]:null;const used=new Set(q.boxes.filter(b=>b!==i&&q.roles[b]!=null).map(b=>q.roles[b]));const pool=q.type==="Fecha"?fbDateOrder(q):fbSlots(q);const v=sfx||pool.find(p=>!used.has(p));if(v)q.roles[i]=v}}
   if(/opción/.test(q.type)&&(r.kind==="check"||r.kind==="radio")&&!q.opts.some(op=>op.box===i)){
     const free=q.opts.find(op=>op.box==null);if(free)free.box=i;else q.opts.push({label:fbPretty(r.nuevo.split("_").pop()),code:"",box:i})}
   if(q.type==="Sí / No"&&(r.kind==="check"||r.kind==="radio")){const lab=/_no$/.test(r.nuevo)?"No":"Sí";let op=q.opts.find(o=>o.label===lab);if(!op){op={label:lab,code:"",box:null};q.opts.push(op)}op.box=i}
 }
-function f2RemoveBox(q,i){q.boxes=q.boxes.filter(x=>x!==i);q.opts.forEach(op=>{if(op.box===i)op.box=null})}
-function f2Move(qid,sid,beforeId){
+function f2RemoveBox(q,i){q.boxes=q.boxes.filter(x=>x!==i);if(q.roles)delete q.roles[i];q.opts.forEach(op=>{if(op.box===i)op.box=null})}
+function f2Move(qid,sid,beforeId,sub){
   const q=fbQ(qid);if(!q||q.parentId)return;
   const block=[q,...fbParts(q)];ST.Q=ST.Q.filter(x=>!block.includes(x));
   q.sid=sid;block.forEach(b=>b.sid=sid);
-  let at=beforeId!=null?ST.Q.findIndex(x=>x.id===beforeId):-1;
+  const bq=beforeId!=null?fbQ(beforeId):null;
+  if(sub!==undefined)q.sub=sub;else if(bq)q.sub=fbRootSub(bq);
+  else{const s=ST.S.find(x=>x.id===sid);const subs=(s&&s.subs)||[];if(q.sub&&!subs.some(u=>u.title===q.sub))q.sub=subs.length?subs[subs.length-1].title:""}
+  const at=bq?ST.Q.indexOf(bq):-1;
   if(at<0)ST.Q.push(...block);else ST.Q.splice(at,0,...block);
 }
 function f2Step(qid,d){
   const q=fbQ(qid);const list=fbOrdered().filter(x=>!x.parentId);const k=list.indexOf(q);const t=list[k+d];
   if(!t)return;
-  if(d<0){f2Move(qid,t.sid,t.id)}else{const after=list[k+2];f2Move(qid,t.sid,after&&after.sid===t.sid?after.id:null);if(!after||after.sid!==t.sid){/* al final de la sección de t */const block=[q,...fbParts(q)];ST.Q=ST.Q.filter(x=>!block.includes(x));const lastIdx=ST.Q.map(x=>x.sid).lastIndexOf(t.sid);ST.Q.splice(lastIdx+1,0,...block)}}
+  const same=t.sid===q.sid&&fbRootSub(t)===fbRootSub(q);
+  if(d<0){if(same)f2Move(qid,t.sid,t.id);else f2Move(qid,t.sid,null,fbRootSub(t))}
+  else{if(!same)f2Move(qid,t.sid,t.id);else{const a=list[k+2];f2Move(qid,t.sid,a&&a.sid===t.sid&&fbRootSub(a)===fbRootSub(t)?a.id:null,fbRootSub(t))}}
 }
 /* render: formulario */
 const f2TypeIcon=t=>({"Texto corto":"Aa","Texto largo":"¶","Número":"#","Importe":"$","Porcentaje":"%","Fecha":"📅","Hora":"⏱","Email":"@","Teléfono":"☎","Una opción de una lista":"◉","Varias opciones de una lista":"☑","Sí / No":"S/N","Casilla de aceptación":"☐","Firma":"✍","Texto informativo":"i"})[t]||"Aa";
+function f2CondChip(o){return o.cond&&o.cond.qid&&fbQ(o.cond.qid)?`<span class="cchip">👁 si ${esc(condText(o))}</span>`:o.condTxt?`<span class="cchip rev" title="No se pudo leer la condición">👁 (revisar) ${esc(o.condTxt)}</span>`:""}
 function f2Form(){
   fbNorm();
   const qs=($("#f2-qs").value||"").trim().toLowerCase();
+  const ord=fbOrdered();
+  const hit=q=>q.label.toLowerCase().includes(qs)||(q.json||"").toLowerCase().includes(qs)||q.boxes.some(i=>rn.rows[i].nuevo.includes(qs));
   const html=ST.S.map((s,si)=>{
-    const items=ST.Q.filter(q=>q.sid===s.id);
-    const vis=qs?items.filter(q=>q.label.toLowerCase().includes(qs)||(q.json||"").toLowerCase().includes(qs)||q.boxes.some(i=>rn.rows[i].nuevo.includes(qs))):items;
+    const items=ord.filter(q=>q.sid===s.id);
+    const vis=qs?items.filter(hit):items;
     if(qs&&!vis.length)return"";
+    const fold=!qs&&ST.coll.has("s|"+s.id);
+    const groups=[{t:"",u:null},...s.subs.map(u=>({t:u.title,u}))];
+    const body=groups.map(g=>{const gq=vis.filter(q=>fbRootSub(q)===g.t);if(!gq.length&&(!g.u||qs))return"";
+      const col=!qs&&ST.coll.has(s.id+"|"+g.t);
+      const head=g.u?`<div class="f2sub"><button class="f2sub-t" data-subfold="${esc(g.t)}" aria-expanded="${!col}">${col?"▸":"▾"} ${esc(g.t)}</button>${g.u.hidden?'<span class="hidb">oculta</span>':""}${+g.u.rep>0?`<span class="pchip">se repite hasta ${g.u.rep}</span>`:""}${f2CondChip(g.u)}<span class="cnt">${gq.filter(q=>!q.parentId).length}</span></div>`:"";
+      return`<div class="f2sub-g" data-sub="${esc(g.t)}">${head}${col?"":gq.map(f2Card).join("")}</div>`}).join("");
     return `<div class="f2s${s.id===ST.activeS?" act":""}" data-sid="${s.id}">
-      <div class="f2s-h" draggable="true" data-sdrag="${s.id}"><span class="grip" title="Arrastrá para mover la sección">⋮⋮</span><input class="f2s-t" data-sid="${s.id}" value="${esc(s.title)}" aria-label="Nombre de la sección">${s.hidden?'<span class="hidb">oculta</span>':""}<span class="cnt">${items.filter(q=>!q.parentId).length}</span>
+      <div class="f2s-h" draggable="true" data-sdrag="${s.id}"><span class="grip" title="Arrastrá para mover la sección">⋮⋮</span><button class="mini f2fold" data-sact="fold" aria-expanded="${!fold}" aria-label="${fold?"Abrir":"Cerrar"} la sección">${fold?"▸":"▾"}</button><input class="f2s-t" data-sid="${s.id}" value="${esc(s.title)}" aria-label="Nombre de la sección">${s.hidden?'<span class="hidb">oculta</span>':""}${f2CondChip(s)}<span class="cnt">${items.filter(q=>!q.parentId).length}</span>
         <button class="mini" data-sact="up" ${si===0?"disabled":""} aria-label="Subir sección">↑</button><button class="mini" data-sact="down" ${si===ST.S.length-1?"disabled":""} aria-label="Bajar sección">↓</button><button class="mini${s.hidden?" hid":""}" data-sact="hide" title="Una sección oculta no se le muestra a la persona, pero sus datos van al PDF y al JSON">${s.hidden?"Oculta":"Visible"}</button><button class="mini" data-sact="del" aria-label="Borrar sección">Borrar</button></div>
-      <div class="f2s-b" data-drop="${s.id}">${(()=>{let ps=null;return vis.map(q=>{let h="";if(!q.parentId&&(q.sub||"")!==(ps||"")){ps=q.sub||"";if(ps)h=`<div class="f2sub">${esc(ps)}</div>`}return h+f2Card(q)}).join("")})()||`<p class="f2-empty">Sección vacía. Escribí una pregunta arriba o arrastrá una acá.</p>`}</div></div>`}).join("");
+      <div class="f2s-b" data-drop="${s.id}">${fold?"":(body||`<p class="f2-empty">Sección vacía. Escribí una pregunta arriba o arrastrá una acá.</p>`)}</div></div>`}).join("");
   $("#f2-form").innerHTML=html||'<p class="f2-empty">No hay resultados para esa búsqueda.</p>';
 }
 function f2Card(q){
@@ -1109,7 +1151,7 @@ function f2Card(q){
     <div class="f2q-row">${q.parentId?'<span class="grip">↳</span>':'<span class="grip" title="Arrastrá para mover">⋮⋮</span>'}<span class="ti" title="${esc(q.type)}">${f2TypeIcon(parts.length?"Texto corto":q.type)}</span>
       <span class="lb">${esc(q.label)}${q.req&&!parts.length?'<b class="req">*</b>':""}</span>
       ${q.parentId?"":`<button class="mini" data-act="up" aria-label="Subir">↑</button><button class="mini" data-act="down" aria-label="Bajar">↓</button>`}</div>
-    <div class="f2q-meta">${parts.length?`<span class="pchip">se arma con ${parts.map(p=>esc(p.label)).join(" + ")}</span>`:""}${q.cond&&q.cond.qid&&fbQ(q.cond.qid)?`<span class="cchip">👁 si ${esc(condText(q))}</span>`:""}${q.origin&&q.origin!=="La completa la persona"?`<span class="pchip">${esc(q.origin)}</span>`:""}${pdf}${js}</div>
+    <div class="f2q-meta">${q.oculto?'<span class="hidb">dato oculto</span>':""}${parts.length?`<span class="pchip">se arma con ${parts.map(p=>esc(p.label)).join(" + ")}</span>`:""}${q.cond&&q.cond.qid&&fbQ(q.cond.qid)?`<span class="cchip">👁 si ${esc(condText(q))}</span>`:""}${q.origin&&q.origin!=="La completa la persona"?`<span class="pchip">${esc(q.origin)}</span>`:""}${pdf}${js}</div>
     ${open?f2Editor(q):""}</div>`;
 }
 function f2Editor(q){
@@ -1121,16 +1163,16 @@ function f2Editor(q){
     <div class="f2e-g"><label>Pregunta<input data-e="label" value="${esc(q.label)}"></label>
       <label>Tipo<select data-e="type">${TIPOS.map(t=>`<option${t===q.type?" selected":""}>${esc(t)}</option>`).join("")}</select></label>
       ${q.parentId?"":`<label>Sección<select data-e="sid">${ST.S.map(s=>`<option value="${s.id}"${s.id===q.sid?" selected":""}>${esc(s.title)}</option>`).join("")}</select></label>`}</div>
-    ${q.parentId?"":`<div class="f2e-g"><label>Subsección<input data-e="sub" value="${esc(q.sub||"")}" list="f2-subs-${q.sid}" placeholder="Opcional"><datalist id="f2-subs-${q.sid}">${[...new Set(ST.Q.filter(x=>x.sid===q.sid&&x.sub).map(x=>x.sub))].map(v=>`<option value="${esc(v)}">`).join("")}</datalist></label><label>Origen<select data-e="origin">${ORIGENES.map(o=>`<option${o===(q.origin||ORIGENES[0])?" selected":""}>${o}</option>`).join("")}</select></label></div>`}
-    <div class="f2e-c"><label><input type="checkbox" data-e="req" ${q.req?"checked":""}> Obligatoria</label>${q.parentId?"":`<label><input type="checkbox" data-e="inpdf" ${q.inPdf!==false?"checked":""}> Se ve en el PDF</label><label><input type="checkbox" data-e="repeat" ${q.repeat?"checked":""}> Se repite (una fila por casillero)</label>`}</div>
+    ${q.parentId?"":`<div class="f2e-g"><label>Subsección<input data-e="sub" value="${esc(q.sub||"")}" list="f2-subs-${q.sid}" placeholder="Opcional"><datalist id="f2-subs-${q.sid}">${((ST.S.find(s=>s.id===q.sid)||{}).subs||[]).map(u=>u.title).map(v=>`<option value="${esc(v)}">`).join("")}</datalist></label><label>Origen<select data-e="origin">${ORIGENES.map(o=>`<option${o===(q.origin||ORIGENES[0])?" selected":""}>${o}</option>`).join("")}</select></label></div>`}
+    <div class="f2e-c"><label><input type="checkbox" data-e="req" ${q.req?"checked":""}> Obligatoria</label>${q.parentId?"":`<label><input type="checkbox" data-e="inpdf" ${q.inPdf!==false?"checked":""}> Se ve en el PDF</label><label><input type="checkbox" data-e="repeat" ${q.repeat?"checked":""}> Se repite (una fila por casillero)</label><label><input type="checkbox" data-e="oculto" ${q.oculto?"checked":""}> Dato oculto (no se le muestra)</label>`}</div>
     ${q.parentId?"":(()=>{const c=q.cond||{};const t=c.qid?fbQ(c.qid):null;const cands=fbOrdered().filter(x=>x!==q&&!x.parentId&&!fbParts(x).length);
       const valCtl=t&&t.opts.length?`<select data-e="cval"><option value="">—</option>${t.opts.map(o=>`<option${o.label===c.val?" selected":""}>${esc(o.label)}</option>`).join("")}</select>`:t&&t.type==="Sí / No"?`<select data-e="cval"><option value="">—</option><option${c.val==="Sí"?" selected":""}>Sí</option><option${c.val==="No"?" selected":""}>No</option></select>`:`<input data-e="cval" value="${esc(c.val||"")}" placeholder="Valor">`;
       return `<div class="f2e-blk"><div class="f2e-h">Visibilidad</div><div class="f2e-cond"><span class="hint">Se muestra si</span><select data-e="cq"><option value="">siempre</option>${cands.map(x=>`<option value="${x.id}"${x.id===c.qid?" selected":""}>${esc(x.label)}</option>`).join("")}</select>${t?`<select data-e="cop">${CONDOPS.map(o=>`<option${o===(c.op||CONDOPS[0])?" selected":""}>${o}</option>`).join("")}</select>${/igual/.test(c.op||CONDOPS[0])?valCtl:""}`:""}</div></div>`})()}
-    ${q.parentId?"":`<div class="f2e-g"><label>Reglas / formato<input data-e="rule" value="${esc(q.rule||[q.fmt,q.maxLen?`máx. ${q.maxLen}`:""].filter(Boolean).join(" · "))}" placeholder="Ej.: 9 dígitos · email · máx. 50"></label><label>Ejemplo<input data-e="ex" value="${esc(q.ex||"")}"></label>${(ST.S.find(x=>x.id===q.sid)||{}).hidden?`<label>Valor o cálculo<input data-e="calc" value="${esc(q.calc||"")}"></label>`:""}<label>Notas<input data-e="notes" value="${esc(q.notes||"")}"></label></div>${q.condTxt&&!(q.cond&&q.cond.qid)?`<p class="hint" style="color:var(--warn)">Condición escrita en la plantilla que no se pudo leer: «${esc(q.condTxt)}». Elegila arriba en Visibilidad.</p>`:""}`}
+    ${q.parentId?"":`<div class="f2e-g"><label>Reglas / formato<input data-e="rule" value="${esc(q.rule||[q.fmt,q.maxLen?`máx. ${q.maxLen}`:""].filter(Boolean).join(" · "))}" placeholder="Ej.: 9 dígitos · email · máx. 50"></label><label>Ejemplo<input data-e="ex" value="${esc(q.ex||"")}"></label><label>En el PDF va partido en<input data-e="split" value="${esc(q.split||"")}" placeholder="Ej.: día / mes / año · código / número"></label>${fbHiddenArea(q)?`<label>Valor o cálculo<input data-e="calc" value="${esc(q.calc||"")}"></label>`:""}<label>Notas<input data-e="notes" value="${esc(q.notes||"")}"></label></div>${q.condTxt&&!(q.cond&&q.cond.qid)?`<p class="hint" style="color:var(--warn)">Condición escrita en la plantilla que no se pudo leer: «${esc(q.condTxt)}». Elegila arriba en Visibilidad.</p>`:""}`}
     ${list?`<div class="f2e-blk"><div class="f2e-h">Opciones</div>${q.opts.map((o,k)=>`<div class="f2e-opt"><input data-o="label" data-k="${k}" value="${esc(o.label)}" placeholder="Opción" aria-label="Opción"><input data-o="code" data-k="${k}" value="${esc(o.code||"")}" placeholder="Código" aria-label="Código" class="code"><select data-o="box" data-k="${k}" aria-label="Casillero"><option value="">sin casilla</option>${q.boxes.map(i=>`<option value="${i}"${o.box===i?" selected":""}>${esc(rn.rows[i].nuevo)}</option>`).join("")}</select><button class="mini" data-act="delopt" data-k="${k}" aria-label="Quitar opción">×</button></div>`).join("")}<button class="mini" data-act="addopt">+ Opción</button></div>`:""}
     <div class="f2e-blk"><div class="f2e-h">PDF</div>
       ${q.parentId?`<p class="hint">Va escrito junto con las otras partes en el casillero de «${esc((fbQ(q.parentId)||{}).label)}».</p>`:`
-      <div class="chips">${q.boxes.map(i=>`<span class="bchip">${esc(rn.rows[i].nuevo)}<button data-act="unbox" data-i="${i}" aria-label="Quitar casillero">×</button></span>`).join("")||'<span class="hint">Sin casilleros. Tocá casilleros libres en el PDF para sumarlos.</span>'}</div>
+      <div class="chips">${q.boxes.map(i=>`<span class="bchip">${esc(rn.rows[i].nuevo)}${f2RoleSel(q,i)}<button data-act="unbox" data-i="${i}" aria-label="Quitar casillero">×</button></span>`).join("")||'<span class="hint">Sin casilleros. Tocá casilleros libres en el PDF para sumarlos.</span>'}</div>
       ${sugB.length?`<div class="chips sug"><span class="hint">Sugeridos:</span>${sugB.map(i=>`<button class="bchip add" data-act="addbox" data-i="${i}">+ ${esc(rn.rows[i].nuevo)}</button>`).join("")}</div>`:""}`}</div>
     <div class="f2e-blk"><div class="f2e-h">JSON</div>
       ${q.json?`<div class="chips"><span class="jchip ${q.jsonOk?"ok":"sug"}">${esc(q.json)}</span>${q.jsonOk?"":`<button class="mini" data-act="okj">Confirmar</button>`}<button class="mini" data-act="nojson">Quitar</button></div>`:`<span class="hint">${ST.paths.length?"Tocá un dato en el panel del JSON para unirlo.":"No hay JSON cargado."}</span>`}</div>
@@ -1142,6 +1184,7 @@ function f2Editor(q){
     <div class="f2e-c" style="justify-content:space-between"><button class="mini" data-act="close">Cerrar</button><button class="mini danger" data-act="del">Borrar pregunta</button></div>
   </div>`;
 }
+function f2RoleSel(q,i){const o=fbRoleOpts(q);if(!o)return"";const cur=(q.roles||{})[i]||"";const a=fbRoleOf(q,i,true);return`<select class="rsel" data-e="role" data-i="${i}" aria-label="Qué parte va en ${esc(rn.rows[i].nuevo)}"><option value="">auto${a?` (${esc(fbRoleLabel(q,a))})`:""}</option>${o.map(([v,l])=>`<option value="${esc(v)}"${v===cur?" selected":""}>${esc(l)}</option>`).join("")}</select>`}
 /* render: PDF */
 async function f2RenderPdf(){
   const tok=ST.pdfTok=(ST.pdfTok||0)+1;
@@ -1222,7 +1265,9 @@ $("#f2-projson").addEventListener("click",()=>{if(!ST.paths.length){$("#f2-msg")
 $("#f2-okall").addEventListener("click",()=>{ST.Q.forEach(q=>{if(q.json)q.jsonOk=true});fbAll()});
 $("#f2-form").addEventListener("click",e=>{
   const sh=e.target.closest(".f2s");if(sh)ST.activeS=+sh.dataset.sid;
+  const sf=e.target.closest("[data-subfold]");if(sf&&sh){const k=sh.dataset.sid+"|"+sf.dataset.subfold;if(ST.coll.has(k))ST.coll.delete(k);else ST.coll.add(k);f2Form();return}
   const sa=e.target.dataset.sact;
+  if(sa==="fold"&&sh){const k="s|"+sh.dataset.sid;if(ST.coll.has(k))ST.coll.delete(k);else ST.coll.add(k);f2Form();return}
   if(sa){const sid=+sh.dataset.sid;const k=ST.S.findIndex(s=>s.id===sid);
     if(sa==="hide"){ST.S[k].hidden=!ST.S[k].hidden}
     if(sa==="up"&&k>0){[ST.S[k-1],ST.S[k]]=[ST.S[k],ST.S[k-1]]}
@@ -1268,6 +1313,9 @@ $("#f2-form").addEventListener("change",e=>{
   if(k==="inpdf"){q.inPdf=t.checked;f2Form();f2Stats();return}
   if(k==="origin"){q.origin=t.value;f2Form();return}
   if(k==="sub"){q.sub=t.value.trim();f2Form();return}
+  if(k==="role"){q.roles=q.roles||{};if(t.value)q.roles[+t.dataset.i]=t.value;else delete q.roles[+t.dataset.i];return}
+  if(k==="split"){q.split=t.value.trim();f2Form();return}
+  if(k==="oculto"){q.oculto=t.checked;f2Form();return}
   if(k==="fmt"){q.fmt=t.value;return}
   if(k==="rule"){q.rule=t.value;return}
   if(k==="calc"){q.calc=t.value;return}
@@ -1298,7 +1346,7 @@ $("#f2-form").addEventListener("drop",e=>{
   e.preventDefault();const sid=e.dataTransfer.getData("text/sid"),qid=e.dataTransfer.getData("text/qid");
   if(sid){const t=e.target.closest(".f2s");if(!t)return;const a=ST.S.findIndex(s=>s.id===+sid);const mv=ST.S.splice(a,1)[0];const b=ST.S.findIndex(s=>s.id===+t.dataset.sid);ST.S.splice(b<0?ST.S.length:b,0,mv);fbAll();return}
   if(qid){const c=e.target.closest(".f2q");const s=e.target.closest(".f2s");if(!s)return;
-    if(c&&!c.classList.contains("part")&&+c.dataset.id!==+qid)f2Move(+qid,+s.dataset.sid,+c.dataset.id);else if(!c)f2Move(+qid,+s.dataset.sid,null);
+    if(c&&!c.classList.contains("part")&&+c.dataset.id!==+qid)f2Move(+qid,+s.dataset.sid,+c.dataset.id);else if(!c){const g=e.target.closest(".f2sub-g");f2Move(+qid,+s.dataset.sid,null,g?g.dataset.sub:undefined)}
     ST.activeS=+s.dataset.sid;fbAll()}
 });
 $("#f2-json").addEventListener("click",e=>{
@@ -1351,15 +1399,16 @@ async function f2Excel(msgEl){
   let row=3;
   ST.S.forEach(s=>{
     const qs=ord.filter(q=>q.sid===s.id);
-    w1.mergeCells(row,1,row,NC);const sc=w1.getCell(row,1);sc.value=`${s.title}${s.hidden?"  ·  OCULTA (no se le muestra a la persona)":""}  ·  ${qs.filter(q=>!q.parentId).length} preguntas`;sc.font=font({bold:true,color:{argb:C.white},size:11});sc.fill=F(s.hidden?C.gray:C.sec);w1.getRow(row).height=20;row++;
-    let k=0;
+    w1.mergeCells(row,1,row,NC);const sc=w1.getCell(row,1);sc.value=`${s.title}${s.hidden?"  ·  OCULTA (no se le muestra a la persona)":""}${(s.cond&&s.cond.qid)||s.condTxt?"  ·  se muestra si "+condText(s):""}  ·  ${qs.filter(q=>!q.parentId).length} preguntas`;sc.font=font({bold:true,color:{argb:C.white},size:11});sc.fill=F(s.hidden?C.gray:C.sec);w1.getRow(row).height=20;row++;
+    let k=0,cs=null;
     qs.forEach(q=>{
+      if(!q.parentId&&fbRootSub(q)!==cs){cs=fbRootSub(q);const u=(s.subs||[]).find(x=>x.title===cs);if(cs){w1.mergeCells(row,1,row,NC);const uc=w1.getCell(row,1);uc.value=`   ${cs}${u&&u.hidden?"  ·  oculta":""}${u&&+u.rep>0?`  ·  se repite hasta ${u.rep}`:""}${u&&((u.cond&&u.cond.qid)||u.condTxt)?"  ·  se muestra si "+condText(u):""}`;uc.font=font({bold:true,color:{argb:C.sec}});uc.fill=F("FFE8ECF4");row++}}
       const parts=fbParts(q);const par=q.parentId?fbQ(q.parentId):null;if(!q.parentId)k++;
       const inPdf=par?par.inPdf!==false:q.inPdf!==false;
       const pdfOk=par||!inPdf?"No aplica":q.boxes.length?"Asignado":"Falta";
       const vals=[pid.get(q.id),s.title,par?"":(q.sub||""),q.parentId?"":k,(q.parentId?"   ↳ ":"")+q.label,parts.length?"Se arma con las partes":q.type,parts.length?"—":q.req?"Sí":"No",par?"":(q.origin||"La completa la persona"),q.repeat?`Sí (${q.rep})`:"No",
         parts.length?parts.map(p=>p.label).join(" + ")+(q.sep?` (separa «${q.sep}»)`:""):par?`Parte de ${pid.get(par.id)} ${par.label}`:"",
-        condText(q),q.opts.map(o=>o.label+(o.code?` = ${o.code}`:"")).join("\n"),q.rule||q.fmt||"",q.calc||q.maxLen||"",inPdf?"Sí":"No",(par?"":q.boxes.map(i=>rn.rows[i].nuevo).join("\n")),"",q.json||"","",q.notes||""];
+        condText(q),q.opts.map(o=>o.label+(o.code?` = ${o.code}`:"")).join("\n"),q.rule||q.fmt||"",q.calc||q.maxLen||"",inPdf?"Sí":"No",(par?"":q.boxes.map(i=>{const ro=fbRoleOpts(q)?fbRoleOf(q,i):null;return rn.rows[i].nuevo+(ro?` (${fbRoleLabel(q,ro)})`:"")}).join("\n")),"",q.json||"","",q.notes||""];
       vals.forEach((v,c)=>{const cell=w1.getCell(row,c+1);cell.value=v;cell.font=font(q.parentId?{color:{argb:C.gray}}:{});cell.border=BOX;cell.alignment={vertical:"top",wrapText:true};if(k%2===0&&!q.parentId)cell.fill=F("FFF7F8FA")});
       if(q.cond&&q.cond.qid){const cc=w1.getCell(row,11);cc.font=font({color:{argb:"FF5B2DB8"}})}
       stCell(w1.getCell(row,17),pdfOk);
@@ -1414,12 +1463,9 @@ const CONDOPS=["es igual a","no es igual a","tiene valor","está vacía"];
 const OCULTO_ORIG=["Viene del sistema","Se calcula","Valor fijo"];
 const yes=v=>/^(s|si|sí|x|true|1|yes)$/i.test(String(v??"").trim());
 function qCurVal(t){const ps=fbParts(t);if(ps.length)return ps.map(p=>TP.vals[p.id]).filter(Boolean).join(t.sep??" ");return TP.vals[t.id]}
-function qVisible(q,depth){
-  depth=depth||0;if(depth>8)return true;
-  const own=q.parentId?fbQ(q.parentId):q;if(!own)return true;
-  const c=own.cond;if(!c||!c.qid)return true;
-  const t=fbQ(c.qid);if(!t)return true;
-  if(!qVisible(t,depth+1))return false;
+function condOk(c,depth){
+  if(!c||!c.qid)return true;const t=fbQ(c.qid);if(!t)return true;
+  if(!qVisible(t,(depth||0)+1))return false;
   let v=qCurVal(t);if(Array.isArray(v))v=v.find(Boolean);
   const s=v===true?"Sí":v===false||v==null?"":String(v);
   const eq=s.trim().toLowerCase()===String(c.val??"").trim().toLowerCase();
@@ -1428,15 +1474,28 @@ function qVisible(q,depth){
   if(c.op==="está vacía")return s==="";
   return eq;
 }
+/* Visible = cumple la condición de su sección, de su subsección y la propia */
+function qVisible(q,depth){
+  depth=depth||0;if(depth>8)return true;
+  const own=q.parentId?fbQ(q.parentId):q;if(!own)return true;
+  const A=fbArea(own);
+  if(A.s&&!condOk(A.s.cond,depth))return false;
+  if(A.sub&&!condOk(A.sub.cond,depth))return false;
+  return condOk(own.cond,depth);
+}
 function condText(q){const c=q.cond;if(!c||!c.qid){return q.condTxt?`(revisar) ${q.condTxt}`:""}const t=fbQ(c.qid);if(!t)return"";return`«${t.label}» ${c.op}${/igual/.test(c.op)?` «${c.val||""}»`:""}`}
-function condPlain(q){const c=q.cond;if(!c||!c.qid)return q.condTxt||"";const t=fbQ(c.qid);if(!t)return"";return`si ${t.label} ${c.op==="es igual a"?"=":c.op==="no es igual a"?"≠":c.op}${/igual/.test(c.op)?" "+(c.val||""):""}`}
+function condPlainC(c,txt){if(!c||!c.qid)return txt||"";const t=fbQ(c.qid);if(!t)return txt||"";return`si ${t.label} ${c.op==="es igual a"?"=":c.op==="no es igual a"?"≠":c.op}${/igual/.test(c.op)?" "+(c.val||""):""}`}
+function condPlain(q){return condPlainC(q.cond,q.condTxt)}
 function parseCond(txt,self){
   let t=String(txt||"").trim().replace(/^se muestra\s+/i,"").replace(/^si\s+/i,"").trim();if(!t)return null;
   let m,op,val="",lab;
-  if((m=t.match(/^(.+?)\s*(?:≠|!=|<>|no es igual a|distinto de)\s*(.+)$/i))){lab=m[1];op="no es igual a";val=m[2]}
-  else if((m=t.match(/^(.+?)\s*(?:=|==|es igual a|es)\s*(.+)$/i))){lab=m[1];op="es igual a";val=m[2]}
-  else if((m=t.match(/^(.+?)\s+(?:tiene valor|está completa|esta completa|no está vacía)$/i))){lab=m[1];op="tiene valor"}
-  else if((m=t.match(/^(.+?)\s+(?:está vacía|esta vacia|vacía|vacia)$/i))){lab=m[1];op="está vacía"}
+  /* primero los símbolos (=, ≠): así una pregunta con «es» en el texto no se corta en el lugar equivocado */
+  if((m=t.match(/^(.+?)\s*(?:≠|!=|<>)\s*(.+)$/))){lab=m[1];op="no es igual a";val=m[2]}
+  else if((m=t.match(/^(.+?)\s*==?\s*(.+)$/))){lab=m[1];op="es igual a";val=m[2]}
+  else if((m=t.match(/^(.+?)\s+(?:tiene valor|está complet[ao]|esta complet[ao]|no está vací[ao]|no esta vaci[ao])$/i))){lab=m[1];op="tiene valor"}
+  else if((m=t.match(/^(.+?)\s+(?:está vací[ao]|esta vaci[ao]|vací[ao]|vaci[ao])$/i))){lab=m[1];op="está vacía"}
+  else if((m=t.match(/^(.+?)\s+(?:no es igual a|distinto de|no es)\s+(.+)$/i))){lab=m[1];op="no es igual a";val=m[2]}
+  else if((m=t.match(/^(.+?)\s+(?:es igual a|es)\s+(.+)$/i))){lab=m[1];op="es igual a";val=m[2]}
   else return null;
   lab=lab.replace(/^[«"'“]|[»"'”]$/g,"").trim();val=val.replace(/^[«"'“]|[»"'”]$/g,"").trim();
   const k=fbToks(lab).join("_");const target=ST.Q.find(x=>x!==self&&fbToks(x.label).join("_")===k);
@@ -1445,75 +1504,8 @@ function parseCond(txt,self){
 function parseOpts(txt,old){
   return String(txt||"").split(/;|\n/).map(x=>x.trim()).filter(Boolean).map(x=>{const i=x.lastIndexOf("=");const label=(i>0?x.slice(0,i):x).trim(),code=i>0?x.slice(i+1).trim():"";const prev=(old||[]).find(o=>fbSlug(o.label)===fbSlug(label));return{label,code,box:prev?prev.box:null}});
 }
-function f2HiddenSid(){let s=ST.S.find(x=>x.hidden&&fbSlug(x.title)==="datos_ocultos")||ST.S.find(x=>x.hidden);if(!s){s={id:ST.nid++,title:"Datos ocultos",hidden:true};ST.S.push(s)}return s.id}
-function f2Infer(){
-  let n=0;
-  if(rn.rows.length)n+=f2ProposeFromPdf();
-  const key=q=>q.boxes.length?Math.min(...q.boxes):1e6;
-  ST.Q.sort((a,b)=>key(a)-key(b));
-  if(ST.paths.length){
-    const owned=new Set(ST.Q.map(q=>q.json).filter(Boolean));
-    ST.paths.forEach(p=>{if(owned.has(p.path))return;
-      const top=fbSlug(p.path.split(".")[0]);
-      const sib=ST.Q.filter(q=>q.json&&fbSlug(q.json.split(".")[0])===top&&!(ST.S.find(s=>s.id===q.sid)||{}).hidden);
-      if(sib.length){const sid=sib[0].sid;const q=f2FromPath(p,sid);q.inPdf=false;q.notes="No aparece en el PDF (solo JSON)";
-        ST.Q=ST.Q.filter(x=>x!==q);const last=ST.Q.lastIndexOf(sib[sib.length-1]);
-        const after=ST.Q.findIndex(x=>x.json&&fbToks(x.json).join()>fbToks(p.path).join()&&x.sid===sid);
-        ST.Q.splice(last+1,0,q);n++;return}
-      const q=f2FromPath(p,f2HiddenSid());q.origin="Sistema (no se ve)";q.inPdf=false;q.hiddenSrc="Viene del sistema";n++});
-  }
-  const firstIdx=s=>{const i=ST.Q.findIndex(q=>q.sid===s.id);return i<0?1e9:i};
-  ST.S=ST.S.filter(s=>ST.Q.some(q=>q.sid===s.id));
-  ST.S.sort((a,b)=>(a.hidden-b.hidden)||firstIdx(a)-firstIdx(b));
-  if(!ST.S.length)f2ActiveSid();
-  return n;
-}
-async function f2TplDownload(){
-  const m=$("#f2-msg");if(!window.ExcelJS){m.textContent="No se pudo cargar el generador de Excel. Recargá la página.";return}
-  let inferred=0;if(!ST.Q.length)inferred=f2Infer();
-  fbNorm();
-  const C={blue:"FF1F4E79",gray:"FF6B7280",ink:"FF1B1F2A",line:"FFD5D9E0",white:"FFFFFFFF",ex:"FFEEF4FA",violet:"FF5B2DB8",slate:"FF4A5160",sec:"FFE8ECF4"};
-  const F=a=>({type:"pattern",pattern:"solid",fgColor:{argb:a}});const thin={style:"thin",color:{argb:C.line}};const BOX={top:thin,left:thin,bottom:thin,right:thin};
-  const font=o=>Object.assign({name:"Arial",size:10,color:{argb:C.ink}},o||{});
-  const wb=new ExcelJS.Workbook();
-  const head=(ws,cols)=>{ws.columns=cols.map(([h,w])=>({header:h,width:w}));ws.getRow(1).height=34;ws.getRow(1).eachCell((c,i)=>{const col=cols[i-1];c.font=font({bold:true,color:{argb:C.white}});c.fill=F(col[2]||C.blue);c.alignment={vertical:"middle",wrapText:true};c.border=BOX});ws.views=[{state:"frozen",ySplit:1,xSplit:2}]};
-  const dv=(ws,col,list,n)=>{for(let r=2;r<=n;r++)ws.getCell(r,col).dataValidation={type:"list",allowBlank:true,formulae:[list]}};
-  const style=(row,ex,shade)=>row.eachCell({includeEmpty:true},(c,i)=>{c.font=font(i===1?{color:{argb:C.gray},size:8}:{});c.border=BOX;c.alignment={vertical:"top",wrapText:true};if(ex)c.fill=F(C.ex);else if(shade)c.fill=F("FFF7F8FA")});
-  /* Hoja 1 */
-  const w1=wb.addWorksheet("Lo que ve la persona",{properties:{tabColor:{argb:C.blue}}});
-  const H1=[["ID",7,C.gray,"No lo cambies: conserva lo que ya está conectado."],["Orden",7,C.blue,"Para reordenar, cambiá estos números (o mové la fila). Se ordena por sección y después por este número."],["Sección",24],["Subsección",20],["Pregunta",34,C.blue,"Como la ve la persona. Corregí el texto si hace falta."],["Tipo",22],["Opciones",34,C.blue,"Para listas: opción=código separadas por punto y coma. Ej.: Cédula=0; Pasaporte=9"],["Obligatoria",11],["Viene prellenado",11],["Se muestra si",28,C.violet,"Opcional. Ej.: si Ocupación = Otra"],["Reglas / formato",24,C.blue,"Ej.: 9 dígitos · email · máx. 50 caracteres"],["Ejemplo",18],["¿Va?",8,C.slate,"Poné No para sacar esta pregunta del formulario."],["Notas",28]];
-  head(w1,H1);
-  const vis=fbOrdered().filter(q=>!fbParts(q).length&&!(ST.S.find(s=>s.id===q.sid)||{}).hidden);
-  let sh=false,prevS=null,k=0;
-  vis.forEach(q=>{if(q.sid!==prevS){prevS=q.sid;k=0;sh=!sh}k++;
-    const row=w1.addRow(["Q"+q.id,k,secTitle(q.sid),q.sub||"",q.label,q.type,q.opts.map(o=>o.label+(o.code?"="+o.code:"")).join("; "),q.req?"Sí":"No",/Prellenado/.test(q.origin||"")?"Sí":"No",condPlain(q),q.rule||[q.fmt,q.maxLen?`máx. ${q.maxLen}`:""].filter(Boolean).join(" · "),q.ex||"","Sí",q.notes||""]);style(row,false,sh)});
-  if(!vis.length)[["EJ",1,"Datos del cliente","","Primer nombre","Texto corto","","Sí","Sí","","máx. 50","Ana","Sí","Fila de ejemplo"],["EJ",2,"Datos del cliente","","Tipo de identificación","Una opción de una lista","Cédula=0; Pasaporte=9; Otro=99","Sí","No","","","","Sí",""],["EJ",3,"Datos del cliente","","¿Cuál?","Texto corto","","Sí","No","si Tipo de identificación = Otro","","","Sí","Se muestra solo si eligió Otro"]].forEach(r=>style(w1.addRow(r),true));
-  const N1=Math.max(200,vis.length+80);
-  dv(w1,6,`"${TIPOS.join(",")}"`,N1);dv(w1,8,'"Sí,No"',N1);dv(w1,9,'"Sí,No"',N1);dv(w1,13,'"Sí,No"',N1);
-  w1.autoFilter={from:{row:1,column:1},to:{row:1,column:H1.length}};
-  /* Hoja 2 */
-  const w2=wb.addWorksheet("Datos ocultos",{properties:{tabColor:{argb:C.slate}}});
-  const H2=[["ID",7,C.gray,"No lo cambies."],["Orden",7,C.slate],["Dato",34,C.slate,"Qué dato es. No se le muestra a la persona."],["De dónde sale",20,C.slate],["Valor o cálculo",34,C.slate,"Si es fijo, el valor; si se calcula, cómo. Ej.: edad a partir de la fecha de nacimiento."],["Ejemplo",22,C.slate],["¿Va?",8,C.slate,"Poné No para sacarlo."],["Notas",30,C.slate]];
-  head(w2,H2);
-  const hid=fbOrdered().filter(q=>!fbParts(q).length&&(ST.S.find(s=>s.id===q.sid)||{}).hidden);
-  hid.forEach((q,i)=>{const src=q.hiddenSrc||(/calcula/i.test(q.origin||"")?"Se calcula":"Viene del sistema");const row=w2.addRow(["Q"+q.id,i+1,q.label,src,q.calc||"",q.ex||"","Sí",q.notes||""]);style(row,false,false)});
-  if(!hid.length)[["EJ",1,"Código de producto","Valor fijo","155","","Sí","Fila de ejemplo"],["EJ",2,"Edad","Se calcula","A partir de la fecha de nacimiento","38","Sí",""]].forEach(r=>style(w2.addRow(r),true));
-  const N2=Math.max(120,hid.length+60);dv(w2,4,`"${OCULTO_ORIG.join(",")}"`,N2);dv(w2,7,'"Sí,No"',N2);
-  /* Instrucciones */
-  const w0=wb.addWorksheet("Cómo completarla",{views:[{showGridLines:false}]});w0.columns=[{width:3},{width:26},{width:88}];
-  w0.getCell("B2").value="Plantilla de preguntas";w0.getCell("B2").font=font({size:18,bold:true,color:{argb:C.blue}});
-  w0.getCell("B3").value=inferred||vis.length?"Ya viene armada con lo que leímos del PDF y del JSON. Revisá, corregí y reordená.":"Completá cómo es el formulario.";w0.getCell("B3").font=font({italic:true,color:{argb:C.gray}});
-  [["Lo que ve la persona","Una fila por pregunta. Corregí el texto, el tipo y las opciones. Para reordenar, cambiá «Orden» o mové la fila; para sacar una pregunta, poné «¿Va?» = No. Podés agregar filas nuevas."],
-   ["Datos ocultos","Datos que viajan por atrás: vienen del sistema, se calculan o son fijos. Si alguno en realidad se le pregunta a la persona, mové la fila a la otra hoja."],
-   ["Se muestra si","Escribilo así: si [pregunta] = [valor]. También: ≠, tiene valor, está vacía."],
-   ["Opciones","opción=código separadas por punto y coma. El código es opcional."],
-   ["ID","No lo cambies. Las filas nuevas van sin ID."]].forEach(([a,b],i)=>{const r=5+i;w0.getCell(`B${r}`).value=a;w0.getCell(`B${r}`).font=font({bold:true});w0.getCell(`C${r}`).value=b;w0.getCell(`C${r}`).alignment={wrapText:true,vertical:"top"};w0.getRow(r).height=32});
-  const buf=await wb.xlsx.writeBuffer();
-  await rnSave(rnBase()+"_plantilla_preguntas.xlsx",new Uint8Array(buf));
-  if(inferred)fbAll();
-  m.textContent=(inferred?`Se infirieron ${inferred} preguntas y datos ocultos desde el PDF y el JSON, y van en la plantilla para que el cliente los revise. `:"")+(/^Listo/.test($("#rn-msg").textContent)?"Plantilla descargada. Cuando vuelva completada, subila con «Subir plantilla».":$("#rn-msg").textContent);
-}
-async function f2TplUpload(file){
+/* Lector del formato anterior de la plantilla (hojas «Lo que ve la persona» / «Datos ocultos») */
+async function f2TplUploadV1(file){
   const m=$("#f2-msg");if(!window.ExcelJS){m.textContent="No se pudo cargar el lector de Excel. Recargá la página.";return}
   let wb;try{wb=new ExcelJS.Workbook();await wb.xlsx.load(await file.arrayBuffer())}catch(e){m.textContent="No se pudo leer ese archivo. ¿Es la plantilla en .xlsx?";return}
   const txt=v=>{if(v==null)return"";if(typeof v==="object"){if(v.richText)return v.richText.map(x=>x.text).join("");if(v.text)return String(v.text);if(v.result!=null)return String(v.result)}return String(v).trim()};
@@ -1558,13 +1550,242 @@ async function f2TplUpload(file){
   fbAll();
 }
 
+/* ── Plantilla v2: Secciones → Subsecciones → Preguntas (formato de docs/plantilla_referencia_v9_1.xlsx) ── */
+const SYS_SEC="Datos del sistema (oculto)";
+const TPL_TIPOS=["Texto corto","Texto largo","Número","Fecha","Email","Teléfono","Una opción de una lista","Una opción (botones)","Varias opciones","Sí / No","Casilla de verificación","Texto informativo","Firma","Dato oculto"];
+const TPL_TIPO_OUT={"Importe":"Número","Porcentaje":"Número","Hora":"Texto corto","Varias opciones de una lista":"Varias opciones","Casilla de aceptación":"Casilla de verificación"};
+const TPL_TIPO_IN={"Una opción (botones)":"Una opción de una lista","Varias opciones":"Varias opciones de una lista","Casilla de verificación":"Casilla de aceptación"};
+const REF_SECS=[["Datos del sistema (oculto)", "Encabezado", true, "", "", "Lo completa Namirial desde el JSON"], ["Datos del sistema (oculto)", "Personas (por cada persona)", true, "", "", ""], ["Datos del sistema (oculto)", "Dirección y notificación", true, "", "", ""], ["Datos Generales", "Información de la Solicitud", false, "", "", ""], ["Información de Póliza", "Datos del Asesor", false, "", "", ""], ["Información de Póliza", "Datos de la Póliza", false, "", "", ""], ["Información de Póliza", "Información adicional", false, "", "", ""], ["Datos del Tomador", "Datos Tomador", false, "", "si ¿El asegurado es el tomador? = No", "Ejemplo de sección condicional"], ["Datos del Tomador", "Contacto y ubicación", false, "", "", ""], ["Datos del Asegurado", "Datos Asegurado", false, "", "", ""], ["Datos del Asegurado", "Contacto y ubicación", false, "", "", ""], ["Datos del Asegurado", "Preferencias de notificación", false, "", "", ""], ["Datos del Dependiente", "Datos Dependiente", false, "", "", ""], ["Datos del Dependiente", "Contacto y ubicación", false, "", "", ""], ["Datos del Beneficiario", "Datos Beneficiario", false, "5", "", "Se cargan las preguntas una vez"], ["Datos del Beneficiario", "Contacto y ubicación", false, "", "", ""], ["Información del riesgo", "Información del riesgo", false, "", "", ""], ["Información del riesgo", "Coberturas Básicas", false, "", "", ""], ["Información del riesgo", "Coberturas Adicionales", false, "", "", ""], ["Declaraciones y Autorización", "Autorizaciones", false, "", "", ""], ["Declaraciones y Autorización", "Declaraciones Legales", false, "", "", ""]];
+const SEC_HELP=["Secciones y subsecciones del formulario", "Sección = paso / pantalla del formulario web (en el machote: \"Pasos Formulario\"). Subsección = bloque dentro de la sección (en el machote: \"Sección\").", "El orden de las filas es el orden del formulario. Si una sección no aplica, poné ¿Va? = No. Las filas grises son ocultas y las completa Namirial.", "Las subsecciones de una misma sección van una debajo de la otra: así se agrupan y la lista de la hoja Preguntas las muestra juntas."];
+const PRE_HELP=["Preguntas del formulario", "Una fila por pregunta. Elegí primero la Sección: la lista de Subsección muestra solo las de esa sección (salen de la hoja Secciones). Mantené juntas las filas de una misma sección. El orden de las filas es el orden dentro de cada subsección.", "Cada subsección se pinta como un bloque (celeste / blanco alternado) y una línea marca dónde empieza. Las filas cargadas son de ejemplo. Las grises (Tipo = Dato oculto) las completa Namirial: en Reglas / formato dice de dónde sale cada dato."];
+const EQUIV=[["En la ficha del INS (machote)", "En esta plantilla", "Comentario"], ["Pasos Formulario", "Sección", "Una pantalla del formulario web."], ["Sección", "Subsección", "Un bloque dentro de la sección."], ["Paso / Sección = \"JSON\"", "Sección \"Datos del sistema (oculto)\" (filas grises)", "Lo completa Namirial desde el JSON: valor fijo, viene del sistema o se calcula."], ["Una hoja por bloque del JSON (encabezado, personas, direccion…)", "Hoja Preguntas, ordenada como el formulario", "La ruta del JSON la conectamos nosotros."], ["Nombre del campo en formulario", "Pregunta", ""], ["Tipo de dato", "Tipo", "Lista cerrada (Combo → Una opción de una lista; Combo/Radio → Una opción (botones))."], ["Valor (una fila por opción)", "Opciones (en una sola celda)", "Ej.: Física=0; DIMEX=6."], ["Obligatorio (Both / WEB / JSON / None)", "Obligatoria (Sí / No)", ""], ["Visualización: Disabled / Dato Prellenado / editable", "Viene prellenado + Se puede editar", "Dos columnas Sí/No."], ["Regla (texto libre con condiciones)", "Se muestra si + Reglas / formato", "La condición va separada del formato."], ["Secciones que aparecen según una respuesta", "Se muestra si, en la hoja Secciones", "Ej.: Datos del Tomador si ¿El asegurado es el tomador? = No."], ["Fecha: día/mes/año (3 casilleros)", "Una pregunta Fecha", "El reparto al PDF lo hace la herramienta."], ["Bloques repetidos (zonas, beneficiarios)", "Se repite hasta, en la hoja Secciones", "Se cargan una sola vez."], ["Formulario a visualizar (TODOS / Abreviado / Completo…)", "Una plantilla por formulario", ""], ["Nombre en PDF / Ruta JSON", "No se piden", "Los conectamos nosotros en la herramienta."]];
+const EQUIV_H=[31.5, 15.0, 15.0, 23.85, 23.85, 15.0, 23.85, 15.0, 15.0, 23.85, 15.0, 23.85, 15.0, 15.0, 23.85, 15.0];
+const tplTypeOf=(type,ui)=>type==="Una opción de una lista"&&ui==="botones"?"Una opción (botones)":(TPL_TIPO_OUT[type]||type);
+function tplType(q){return q.oculto||fbHiddenArea(q)?"Dato oculto":tplTypeOf(q.type,q.ui)}
+function fromTplType(t,q,areaHidden){
+  if(t==="Dato oculto"){q.oculto=!areaHidden;return}
+  q.oculto=false;if(!TPL_TIPOS.includes(t))return;
+  if(tplTypeOf(q.type,q.ui)===t)return; /* equivalente: se conserva el tipo original */
+  q.type=TPL_TIPO_IN[t]||t;if(t==="Una opción (botones)")q.ui="botones";else delete q.ui;
+  if(q.type==="Sí / No"&&!q.opts.length)q.opts=[{label:"Sí",code:"",box:null},{label:"No",code:"",box:null}];
+}
+function tplPre(q){const o=q.origin||"La completa la persona";return o==="La completa la persona"?["No","Sí"]:o==="Prellenado editable"?["Sí","Sí"]:["Sí","No"]}
+function fromTplPre(g,h,q){
+  if(!g&&!h)return;const pre=yes(g),ed=h===""?!pre:yes(h);const cur=tplPre(q);
+  if(cur[0]===(pre?"Sí":"No")&&cur[1]===(ed?"Sí":"No"))return;
+  q.origin=!pre?"La completa la persona":ed?"Prellenado editable":"Prellenado bloqueado";
+}
+function tplRule(q){
+  if(tplType(q)!=="Dato oculto")return q.rule||[q.fmt,q.maxLen?`máx. ${q.maxLen}`:""].filter(Boolean).join(" · ");
+  if(q.rule&&OCULTO_ORIG.some(o=>fbSlug(q.rule).startsWith(fbSlug(o))))return q.rule;
+  return (q.hiddenSrc||(/calcula/i.test(q.origin||"")?"Se calcula":"Viene del sistema"))+(q.calc?` · ${q.calc}`:"");
+}
+function fbRefSecs(){
+  const out=[];
+  /* solo la estructura: las condiciones y notas «Ejemplo…» de la referencia apuntan a preguntas que todavía no existen */
+  REF_SECS.forEach(([t,sub,hid,rep,cond,notes])=>{
+    let s=out.find(x=>x.title===t);const u=fbNewSub(sub);u.rep=+rep||0;notes=/^ejemplo/i.test(notes)?"":notes;
+    if(!s){s={id:ST.nid++,title:t,hidden:hid,cond:null,condTxt:"",notes,subs:[],_ref:true};out.push(s)}
+    else{u.hidden=hid&&!s.hidden;u.notes=notes}
+    s.subs.push(u);
+  });
+  return out;
+}
+function fbFillSubs(){
+  ST.Q.forEach(q=>{if(q.parentId||q.sub)return;const s=ST.S.find(x=>x.id===q.sid);if(!s)return;q.sub=(s.subs&&s.subs[0]&&s.subs[0].title)||s.title});
+  fbNorm();ST.S.forEach(s=>{if(!s.subs.length)s.subs.push(fbNewSub(s.title))});
+}
+function f2HiddenSid(){
+  let s=ST.S.find(x=>fbSlug(x.title)===fbSlug(SYS_SEC))||ST.S.find(x=>x.hidden);
+  if(!s){s={id:ST.nid++,title:SYS_SEC,hidden:true,cond:null,condTxt:"",notes:"",subs:[]};ST.S.unshift(s)}
+  return s.id;
+}
+function f2SysSub(path){
+  const p=fbSlug(path);
+  if(/direcc|domicil|notific|provinc|canton|distrit|ciudad/.test(p))return"Dirección y notificación";
+  if(/persona|cliente|asegurad|tomador|benefic|dependient|nombre|apellid|identific|genero|civil|parentes/.test(p))return"Personas (por cada persona)";
+  return"Encabezado";
+}
+function f2Infer(){
+  let n=0;
+  if(!ST.Q.length){ST.S=fbRefSecs();ST.activeS=null}
+  if(rn.rows.length)n+=f2ProposeFromPdf();
+  const key=q=>q.boxes.length?Math.min(...q.boxes):1e6;
+  ST.Q.sort((a,b)=>key(a)-key(b));
+  if(ST.paths.length){
+    const owned=new Set(ST.Q.map(q=>q.json).filter(Boolean));
+    ST.paths.forEach(p=>{if(owned.has(p.path))return;
+      const q=f2FromPath(p,f2HiddenSid());q.sub=f2SysSub(p.path);q.inPdf=false;q.origin="Sistema (no se ve)";q.hiddenSrc="Viene del sistema";q.rule="Viene del sistema";n++});
+  }
+  const has=s=>ST.Q.some(q=>q.sid===s.id);
+  const firstIdx=s=>{const i=ST.Q.findIndex(q=>q.sid===s.id);return i<0?1e9:i};
+  ST.S=ST.S.filter(s=>has(s)||s._ref);
+  ST.S.sort((a,b)=>((b.hidden?1:0)-(a.hidden?1:0))||firstIdx(a)-firstIdx(b));
+  ST.S.forEach(s=>delete s._ref);
+  if(!ST.S.length)f2ActiveSid();
+  fbNorm();
+  return n;
+}
+async function f2TplDownload(){
+  const m=$("#f2-msg");if(!window.ExcelJS){m.textContent="No se pudo cargar el generador de Excel. Recargá la página.";return}
+  let inferred=0;if(!ST.Q.length)inferred=f2Infer();
+  fbFillSubs();
+  const NAVY="FF1F3A5F",GREEN="FF2E7D32",LINE="FFD0D5DD",WHITE="FFFFFFFF";
+  const F=a=>({type:"pattern",pattern:"solid",fgColor:{argb:a}});
+  const thin={style:"thin",color:{argb:LINE}};const BOX={top:thin,left:thin,bottom:thin,right:thin};
+  const AR=o=>Object.assign({name:"Arial",size:10},o||{});
+  const wb=new ExcelJS.Workbook();wb.creator="Ficha de formulario";wb.calcProperties.fullCalcOnLoad=true;
+  const help=(ws,lines)=>{lines.forEach((t,i)=>{if(t==null)return;const c=ws.getCell(i+1,1);c.value=t;c.font=i===0?AR({size:14,bold:true,color:{argb:NAVY}}):AR({size:9,italic:true,color:{argb:"FF555555"}})});ws.getRow(1).height=17.35};
+  const header=(ws,cols)=>{cols.forEach(([h,w,fill],k)=>{const col=ws.getColumn(k+1);col.width=w;const c=ws.getCell(5,k+1);c.value=h;if(fill===null)return;c.font=AR({size:11,bold:true,color:{argb:WHITE}});c.fill=F(fill||NAVY);c.alignment={vertical:"middle",wrapText:true};c.border=BOX});ws.getRow(5).height=31.5};
+  const body=(ws,r,n)=>{for(let k=1;k<=n;k++){const c=ws.getCell(r,k);c.font=AR();c.alignment={vertical:"top",wrapText:true};c.border=BOX}};
+  const dv=(ws,ref,f)=>ws.dataValidations.add(ref,{type:"list",allowBlank:true,formulae:[f]});
+  const cf=(ws,ref,formula,style)=>ws.addConditionalFormatting({ref,rules:[{type:"expression",formulae:[formula],style}]});
+  const GRAY={fill:{type:"pattern",pattern:"solid",bgColor:{argb:"FFF2F4F7"}},font:{color:{argb:"FF475467"}}};
+  const BAND={fill:{type:"pattern",pattern:"solid",bgColor:{argb:"FFEEF4FB"}}};
+  const DIM={font:{color:{argb:"FFB0B7C3"}}};
+  const LINE_SEC={border:{top:{style:"medium",color:{argb:NAVY}}}};
+  const LINE_SUB={border:{top:{style:"thin",color:{argb:"FF7A9CC6"}}}};
+  /* Hoja Secciones */
+  const wS=wb.addWorksheet("Secciones",{views:[{state:"frozen",xSplit:0,ySplit:5,topLeftCell:"A6"}]});
+  help(wS,SEC_HELP);
+  header(wS,[["Sección",34],["Subsección",34],["Oculta",9],["Se repite hasta",12,GREEN],["Se muestra si",40],["¿Va?",8],["Notas",36],["grupo",13,null]]);
+  const sRows=[];
+  ST.S.forEach(s=>s.subs.forEach((u,i)=>{const first=i===0;
+    sRows.push([s.title,u.title,(s.hidden||(!first&&u.hidden))?"Sí":"No",+u.rep>0?String(u.rep):"",first?(condPlainC(s.cond,s.condTxt)||condPlainC(u.cond,u.condTxt)):condPlainC(u.cond,u.condTxt),"Sí",first?(s.notes||u.notes||""):(u.notes||"")])}));
+  const sEnd=Math.max(66,5+sRows.length+40);let g=0;
+  for(let r=6;r<=sEnd;r++){body(wS,r,7);const v=sRows[r-6];if(v)v.forEach((x,k)=>{if(x!=="")wS.getCell(r,k+1).value=x});
+    const a=v?v[0]:"",pa=r>6&&sRows[r-7]?sRows[r-7][0]:"";g=r===6?1:(a===pa?g:g+1);
+    wS.getCell(r,8).value=r===6?{formula:"1",result:1}:{formula:`IF($A${r}=$A${r-1},H${r-1},H${r-1}+1)`,result:g}}
+  wS.getColumn(8).hidden=true;
+  dv(wS,`C6:C${sEnd}`,'"Sí,No"');dv(wS,`D6:D${sEnd}`,'"2,3,4,5,6,8,10"');dv(wS,`F6:F${sEnd}`,'"Sí,No"');
+  cf(wS,`A6:G${sEnd}`,'$C6="Sí"',GRAY);
+  cf(wS,`A6:G${sEnd}`,'AND($A6<>"",MOD($H6,2)=1)',BAND);
+  cf(wS,`A7:A${sEnd}`,'AND($A7<>"",$A7=$A6)',DIM);
+  cf(wS,`A7:G${sEnd}`,'AND($A7<>"",$A7<>$A6)',LINE_SEC);
+  /* Hoja Preguntas */
+  const wP=wb.addWorksheet("Preguntas",{views:[{state:"frozen",xSplit:3,ySplit:5,topLeftCell:"D6"}]});
+  help(wP,PRE_HELP);
+  header(wP,[["Sección",28],["Subsección",28],["Pregunta",36],["Tipo",22],["Opciones",32],["Obligatoria",11],["Viene prellenado",12],["Se puede editar",11],["Se muestra si",30],["En el PDF va partido en",22,GREEN],["Reglas / formato",24],["Ejemplo",22],["¿Va?",8],["Notas",32],["grupo",13,null],["ID (no tocar)",13,"FF98A2B3"]]);
+  const asked=fbOrdered().filter(q=>!fbParts(q).length);
+  const pRows=asked.map(q=>{const r=fbRoot(q);const[pre,ed]=tplPre(q);const oc=tplType(q)==="Dato oculto";
+    return[secTitle(r.sid),fbRootSub(q),q.label,tplType(q),q.opts.map(o=>o.label+(o.code?"="+o.code:"")).join("; "),oc?"":(q.req?"Sí":"No"),oc?"Sí":pre,oc?"No":ed,condPlain(q),q.split||(q.type==="Fecha"&&q.boxes.length===3?"día / mes / año":""),tplRule(q),q.ex||"","Sí",q.notes||"","Q"+q.id]});
+  const pEnd=5+pRows.length+300;g=0;
+  for(let r=6;r<=pEnd;r++){body(wP,r,14);const v=pRows[r-6];
+    if(v)v.slice(0,14).forEach((x,k)=>{if(x!=="")wP.getCell(r,k+1).value=x});
+    const pv=r>6?pRows[r-7]:null;const ab=v?v[0]+"|"+v[1]:"|",pab=pv?pv[0]+"|"+pv[1]:"|";g=r===6?1:ab===pab?g:g+1;
+    wP.getCell(r,15).value=r===6?{formula:"1",result:1}:{formula:`IF(AND($A${r}=$A${r-1},$B${r}=$B${r-1}),O${r-1},O${r-1}+1)`,result:g};
+    const id=wP.getCell(r,16);id.font=AR({size:9,color:{argb:"FF667085"}});id.fill=F("FFF2F4F7");id.border=BOX;id.alignment={vertical:"top"};if(v)id.value=v[14]}
+  wP.getColumn(15).hidden=true;
+  dv(wP,`A6:A${pEnd}`,`Secciones!$A$6:$A$${sEnd}`);
+  dv(wP,`B6:B${pEnd}`,`OFFSET(Secciones!$B$6,MATCH($A6,Secciones!$A$6:$A$${sEnd},0)-1,0,COUNTIF(Secciones!$A$6:$A$${sEnd},$A6),1)`);
+  dv(wP,`D6:D${pEnd}`,`"${TPL_TIPOS.join(",")}"`);
+  ["F","G","H","M"].forEach(c=>dv(wP,`${c}6:${c}${pEnd}`,'"Sí,No"'));
+  cf(wP,`A6:N${pEnd}`,'$D6="Dato oculto"',GRAY);
+  cf(wP,`A6:N${pEnd}`,'AND($B6<>"",MOD($O6,2)=1)',BAND);
+  cf(wP,`A7:N${pEnd}`,'AND($B7<>"",$A7=$A6,$B7<>$B6)',LINE_SUB);
+  cf(wP,`A7:N${pEnd}`,'AND($A7<>"",$A7<>$A6)',LINE_SEC);
+  cf(wP,`A7:A${pEnd}`,'AND($A7<>"",$A7=$A6)',DIM);
+  cf(wP,`B7:B${pEnd}`,'AND($B7<>"",$A7=$A6,$B7=$B6)',DIM);
+  wP.autoFilter=`A5:N${pEnd}`;
+  /* Hoja Equivalencias (estática) */
+  const wE=wb.addWorksheet("Equivalencias con su ficha");
+  [36,42,56].forEach((w,k)=>wE.getColumn(k+1).width=w);
+  EQUIV.forEach((row,i)=>{row.forEach((x,k)=>{const c=wE.getCell(i+1,k+1);if(x!=="")c.value=x;c.border=BOX;
+    if(i===0){c.font=AR({size:11,bold:true,color:{argb:WHITE}});c.fill=F(NAVY);c.alignment={vertical:"middle",wrapText:true}}
+    else{c.font=AR(k===0?{bold:true}:{});c.alignment={vertical:"top",wrapText:true}}});wE.getRow(i+1).height=EQUIV_H[i]});
+  const buf=await wb.xlsx.writeBuffer();
+  await rnSave(rnBase()+"_plantilla_preguntas.xlsx",new Uint8Array(buf));
+  fbAll();
+  m.textContent=(inferred?`Se infirieron ${inferred} preguntas y datos ocultos desde el PDF y el JSON, y van en la plantilla para que el cliente los revise. `:"")+(/^Listo/.test($("#rn-msg").textContent)?"Plantilla descargada. Cuando vuelva completada, subila con «Subir plantilla».":$("#rn-msg").textContent);
+}
+async function f2TplUpload(file){
+  const m=$("#f2-msg");if(!window.ExcelJS){m.textContent="No se pudo cargar el lector de Excel. Recargá la página.";return}
+  let wb;try{wb=new ExcelJS.Workbook();await wb.xlsx.load(await file.arrayBuffer())}catch(e){m.textContent="No se pudo leer ese archivo. ¿Es la plantilla en .xlsx?";return}
+  const byName=re=>wb.worksheets.find(w=>re.test(fbSlug(w.name)));
+  const wsP=byName(/^preguntas$/),wsS=byName(/^secciones$/);
+  if(!wsP)return f2TplUploadV1(file);
+  const txt=v=>{if(v==null)return"";if(typeof v==="object"){if(v.richText)return v.richText.map(x=>x.text).join("").trim();if(v.text)return String(v.text).trim();if("result" in v)return v.result==null?"":String(v.result).trim();if(v instanceof Date)return v.toISOString().slice(0,10);return""}return String(v).trim()};
+  const table=(ws,key)=>{if(!ws)return[];let hr=0;for(let r=1;r<=12&&!hr;r++)ws.getRow(r).eachCell(c=>{if(fbSlug(txt(c.value))===key)hr=r});if(!hr)return[];
+    const hdr=[];ws.getRow(hr).eachCell({includeEmpty:true},(c,i)=>hdr[i]=fbSlug(txt(c.value)));const out=[];
+    ws.eachRow((row,r)=>{if(r<=hr)return;const o={_r:r};hdr.forEach((h,i)=>{if(h&&h!=="grupo")o[h]=txt(row.getCell(i).value)});if(Object.keys(o).some(k=>k!=="_r"&&o[k]))out.push(o)});return out};
+  const SR=table(wsS,"subseccion"),PR=table(wsP,"pregunta");
+  if(!SR.length&&!PR.length){m.textContent="La plantilla está vacía.";return}
+  const K=fbSlug;let nNew=0,nUpd=0,nDel=0,nRev=0;
+  const delQ=q=>{if(!q||!ST.Q.includes(q))return;ST.Q=ST.Q.filter(x=>x!==q&&x.parentId!==q.id);nDel++};
+  /* 1) Secciones: el orden de las filas manda */
+  const oldS=new Map(ST.S.map(s=>[K(s.title),s]));const newS=[];const dropSub=new Set();const areaCond=[];
+  let lastT="";
+  SR.forEach(r=>{const title=r.seccion||lastT;if(!title)return;lastT=title;const k=K(title);
+    let s=newS.find(x=>K(x.title)===k);
+    if(!s){s=oldS.get(k)||{id:ST.nid++,title};s.title=title;s._old=s.subs||[];s.subs=[];s.cond=null;s.condTxt="";s.hidden=false;s.notes="";newS.push(s)}
+    const subT=r.subseccion||title;
+    if(r.va&&!yes(r.va)){dropSub.add(k+"|"+K(subT));return}
+    if(s.subs.some(u=>K(u.title)===K(subT)))return;
+    const u=s._old.find(x=>K(x.title)===K(subT))||fbNewSub(subT);u.title=subT;
+    u.rep=+r.se_repite_hasta>0?+r.se_repite_hasta:0;u.notes=r.notas||"";u.cond=null;u.condTxt="";
+    if(!s.subs.length){s.hidden=yes(r.oculta);s.notes=r.notas||"";u.hidden=false;if(r.se_muestra_si)areaCond.push({o:s,t:r.se_muestra_si})}
+    else{u.hidden=yes(r.oculta);if(r.se_muestra_si)areaCond.push({o:u,t:r.se_muestra_si})}
+    s.subs.push(u);
+  });
+  newS.forEach(s=>delete s._old);
+  const dropSec=new Set(newS.filter(s=>!s.subs.length).map(s=>K(s.title)));
+  let S2=SR.length?newS.filter(s=>s.subs.length):ST.S.slice();
+  /* lo que quedó con ¿Va? = No en Secciones se va con sus preguntas */
+  ST.Q.filter(q=>!q.parentId).forEach(q=>{const s=ST.S.find(x=>x.id===q.sid);if(!s)return;const k=K(s.title);if(dropSec.has(k)||dropSub.has(k+"|"+K(q.sub||s.title)))delQ(q)});
+  const secFor=t=>{const k=K(t);if(dropSec.has(k))return null;let s=S2.find(x=>K(x.title)===k);if(!s){s=oldS.get(k)||{id:ST.nid++,title:t,hidden:false,cond:null,condTxt:"",notes:""};s.subs=s.subs||[];S2.push(s)}return s};
+  const subFor=(s,t)=>{if(dropSub.has(K(s.title)+"|"+K(t)))return null;let u=s.subs.find(x=>K(x.title)===K(t));if(!u){u=fbNewSub(t);s.subs.push(u)}return u};
+  /* 2) Preguntas: una fila por pregunta, match por ID */
+  const seen=new Set();const placed=[];let lastS="";
+  PR.forEach(r=>{
+    if(!r.pregunta)return;
+    const idm=/^Q(\d+)$/i.exec(r.id_no_tocar||"");let q=idm?fbQ(+idm[1]):null;if(q&&seen.has(q.id))q=null;
+    if(r.va&&!yes(r.va)){if(q)delQ(q);return}
+    const st=r.seccion||lastS||"Sección 1";lastS=st;const s=secFor(st);
+    const u=s?subFor(s,r.subseccion||(s.subs[0]&&s.subs[0].title)||s.title):null;
+    if(!s||!u){if(q)delQ(q);return}
+    if(q)nUpd++;else{q=fbNewQ(r.pregunta,s.id);nNew++}
+    seen.add(q.id);q.sid=s.id;q.label=r.pregunta;
+    if(q.parentId){const par=fbQ(q.parentId);if(par){par.sid=s.id;par.sub=u.title}}else q.sub=u.title;
+    fromTplType(r.tipo,q,!!(s.hidden||u.hidden));
+    if(r.opciones)q.opts=parseOpts(r.opciones,q.opts);else if(!/opción|Sí \/ No/.test(q.type))q.opts=[];
+    if(r.obligatoria)q.req=yes(r.obligatoria);
+    fromTplPre(r.viene_prellenado,r.se_puede_editar,q);
+    if((q.split||"")!==(r.en_el_pdf_va_partido_en||"")){q.split=r.en_el_pdf_va_partido_en||"";delete q.roles}
+    q.rule=r.reglas_formato||"";q.ex=r.ejemplo||"";q.notes=r.notas||"";
+    if(r.tipo==="Dato oculto"){q.hiddenSrc=OCULTO_ORIG.find(o=>K(q.rule).startsWith(K(o)))||q.hiddenSrc||"Viene del sistema";if(!/Sistema|calcula/.test(q.origin||""))q.origin=q.hiddenSrc==="Se calcula"?"Se calcula":"Sistema (no se ve)"}
+    q._cond=r.se_muestra_si||"";placed.push({q,r:r._r});
+  });
+  /* 3) Secciones que quedaron fuera de la hoja pero tienen preguntas que no estaban en la plantilla */
+  const rest=ST.Q.filter(q=>!seen.has(q.id));
+  rest.forEach(q=>{if(q.parentId)return;const s=ST.S.find(x=>x.id===q.sid);if(s&&!S2.includes(s))S2.push(s)});
+  ST.S=S2;
+  /* 4) Condiciones (después de crear todas las preguntas) */
+  const cond=(o,t)=>{if(!t){o.cond=null;o.condTxt="";return}const c=parseCond(t,o.label!=null?o:null);if(c){o.cond=c;o.condTxt=""}else{o.cond=null;o.condTxt=t;nRev++}};
+  placed.forEach(({q})=>{const t=q._cond;delete q._cond;cond(q,t)});
+  areaCond.forEach(({o,t})=>cond(o,t));
+  /* 5) Orden: sección → subsección (hoja Secciones) → fila de la hoja Preguntas */
+  fbNorm();
+  const si=new Map(ST.S.map((s,i)=>[s.id,i]));
+  const ui=q=>{const r=fbRoot(q);const s=ST.S.find(x=>x.id===r.sid);return s?s.subs.findIndex(u=>u.title===(r.sub||"")):-1};
+  placed.sort((a,b)=>(si.get(fbRoot(a.q).sid)-si.get(fbRoot(b.q).sid))||(ui(a.q)-ui(b.q))||(a.r-b.r));
+  const out=[];const done=new Set();
+  const put=q=>{if(done.has(q.id))return;const par=q.parentId?fbQ(q.parentId):null;if(par&&!done.has(par.id)){done.add(par.id);out.push(par)}done.add(q.id);out.push(q)};
+  placed.forEach(x=>put(x.q));
+  ST.Q=[...out,...ST.Q.filter(q=>!done.has(q.id))].filter(q=>!q.parentId||fbQ(q.parentId));
+  if(!ST.S.length)f2ActiveSid();
+  fbNorm();ST.Q.forEach(f2AutoJson);ST.selQ=null;ST.open=null;
+  const keep=rest.filter(q=>!q.parentId&&ST.Q.includes(q)&&!done.has(q.id)).length;
+  m.textContent=`Plantilla cargada: ${nUpd} actualizadas, ${nNew} nuevas, ${nDel} eliminadas, ${nRev} a revisar. Las que ya estaban conectadas al PDF o al JSON conservan sus conexiones.${nRev?" Las condiciones «Se muestra si» que no se pudieron leer quedaron marcadas «(revisar)».":""}${keep?` ${keep} preguntas que no estaban en la plantilla quedaron al final de su sección.`:""}`;
+  fbAll();
+}
+
 $("#f2-tpl-dl").addEventListener("click",f2TplDownload);
 $("#f2-tpl-in").addEventListener("change",async e=>{const f=e.target.files[0];if(f)await f2TplUpload(f);e.target.value=""});
 $("#f2-xlsx").addEventListener("click",()=>f2Excel($("#f2-msg")));
 /* ── Paso 3 · Probar ── */
-const TP={vals:{},count:{},codes:{},rendered:false};
+const TP={vals:{},count:{},codes:{},slots:{},rendered:false};
 const tpParts=fbParts;
-const tpRepKey=q=>q.sid+"|"+q.rep;
+const tpRepKey=q=>q.sid+"|"+fbRootSub(q)+"|"+q.rep;
 const tpBoxSorted=q=>[...q.boxes].sort((a,b)=>a-b);
 function tpGet(o,path){
   if(!o)return undefined;
@@ -1586,8 +1807,10 @@ function tpSet(o,path,val,k){
 const tpNum=t=>/Número|Importe|Porcentaje/.test(t);
 function tpCtl(q,k){
   const v=k>=0?((TP.vals[q.id]||[])[k]??""):(TP.vals[q.id]??"");const a=`data-q="${q.id}" data-k="${k}"`;const t=q.type;
+  const sl=fbSlots(q);
+  if(k<0&&t!=="Fecha"&&sl.length>=2&&!/opción|Sí \/ No|Casilla|Firma|informativo/.test(t)){const sv=tpSlotVals(q,TP.vals[q.id]);return`<div class="pv-slots">${sl.map((s,j)=>`<input type="text" data-q="${q.id}" data-k="-1" data-s="${j}" placeholder="${esc(s)}" aria-label="${esc(q.label)}: ${esc(s)}" value="${esc(sv[j]??"")}">`).join("")}</div>`}
   if(t==="Una opción de una lista"||t==="Varias opciones de una lista"){
-    if(q.opts.length&&q.opts.length<=5)return`<div class="pv-opts">${q.opts.map((o,j)=>`<label><input type="radio" name="tp${q.id}_${k}" value="${esc(o.label)}" ${a} ${v===o.label?"checked":""}> ${esc(o.label)}</label>`).join("")}</div>`;
+    if(q.opts.length&&(q.opts.length<=5||q.ui==="botones"))return`<div class="pv-opts">${q.opts.map((o,j)=>`<label><input type="radio" name="tp${q.id}_${k}" value="${esc(o.label)}" ${a} ${v===o.label?"checked":""}> ${esc(o.label)}</label>`).join("")}</div>`;
     return`<select ${a}><option value="">Elegí una opción</option>${q.opts.map(o=>`<option ${v===o.label?"selected":""}>${esc(o.label)}</option>`).join("")}</select>`;
   }
   if(t==="Sí / No")return`<div class="pv-opts"><label><input type="radio" name="tp${q.id}_${k}" value="Sí" ${a} ${v==="Sí"?"checked":""}> Sí</label><label><input type="radio" name="tp${q.id}_${k}" value="No" ${a} ${v==="No"?"checked":""}> No</label></div>`;
@@ -1599,15 +1822,17 @@ function tpCtl(q,k){
   return`<input type="${tpNum(t)?"number":t==="Email"?"email":t==="Teléfono"?"tel":"text"}" ${a} value="${esc(v)}">`;
 }
 function tpForm(){
-  fbNorm();let html="",sec=null;const doneRep=new Set();
+  fbNorm();let html="",sec=null,sub=null;const doneRep=new Set();
+  const closeSub=()=>{if(sub!==null){html+="</div>";sub=null}};
   fbOrdered().forEach(q=>{
     if(tpParts(q).length)return;
-    const S0=ST.S.find(x=>x.id===q.sid);if(S0&&S0.hidden)return;
-    if(q.sid!==sec){sec=q.sid;TP.sub=null;html+=`<h4 class="pv-sec">${esc(secTitle(sec))}</h4>`}
-    if(!q.parentId&&(q.sub||"")!==(TP.sub||"")){TP.sub=q.sub||"";if(TP.sub)html+=`<h5 class="pv-sub">${esc(TP.sub)}</h5>`}
+    if(fbHiddenArea(q))return;
+    if(q.sid!==sec){closeSub();if(sec!==null)html+="</div>";sec=q.sid;html+=`<div class="pv-s" data-sw="${sec}"><h4 class="pv-sec">${esc(secTitle(sec))}</h4>`}
+    const st=fbRootSub(q);
+    if(st!==sub){closeSub();sub=st;html+=`<div class="pv-sb" data-subw="${sec}" data-subt="${esc(st)}">${st?`<h5 class="pv-sub">${esc(st)}</h5>`:""}`}
     if(q.rep){
       const key=tpRepKey(q);if(doneRep.has(key))return;doneRep.add(key);
-      const group=ST.Q.filter(x=>x.rep&&tpRepKey(x)===key&&!tpParts(x).length);
+      const group=ST.Q.filter(x=>x.rep&&tpRepKey(x)===key&&!tpParts(x).length&&!fbHiddenArea(x));
       const n=TP.count[key]??1;
       html+=`<div class="pv-rep"><div class="pv-rh">Se repite · el PDF tiene lugar para ${q.rep}</div>${Array.from({length:n},(_,k)=>`<div class="pv-row">${group.map(g=>`<label class="pv-f"><span>${k+1}. ${esc(g.label)}</span>${tpCtl(g,k)}</label>`).join("")}</div>`).join("")}
         <div style="display:flex;gap:6px">${n<q.rep?`<button class="mini" type="button" data-rep="${esc(key)}" data-d="1">+ Agregar otro</button>`:""}${n>1?`<button class="mini" type="button" data-rep="${esc(key)}" data-d="-1">Quitar el último</button>`:""}</div></div>`;
@@ -1616,18 +1841,21 @@ function tpForm(){
     if(q.type==="Casilla de aceptación"){html+=`<label class="pv-f pv-ck" data-qw="${q.id}"><input type="checkbox" data-q="${q.id}" data-k="-1" ${TP.vals[q.id]?"checked":""}> ${esc(q.label)}</label>`;return}
     html+=`<label class="pv-f" data-qw="${q.id}"><span>${esc(q.label)}${q.req&&!q.parentId?' <b class="req">*</b>':""}${q.parentId?` <em>· parte de ${esc((fbQ(q.parentId)||{}).label||"")}</em>`:""}${q.cond&&q.cond.qid?` <em>· se muestra si ${esc(condText(q))}</em>`:""}</span>${tpCtl(q,-1)}</label>`;
   });
+  closeSub();if(sec!==null)html+="</div>";
   const hid=ST.S.filter(x=>x.hidden&&ST.Q.some(q=>q.sid===x.id)).map(x=>x.title);
   $("#tp-form").innerHTML=(html||'<p class="msg">No hay preguntas. Volvé al paso 2.</p>')+(hid.length?`<p class="msg" style="margin-top:12px">Secciones ocultas (no se le muestran a la persona, pero sus datos van al PDF y al JSON): ${hid.map(esc).join(", ")}.</p>`:"");
   tpApplyVis();
 }
 const tpSuffix=i=>(rn.rows[i].nuevo.match(/_(dia|mes|ano)$/)||[])[1];
+function tpSlotVals(q,v){const s=TP.slots[q.id];return s&&s.some(Boolean)?s:String(v??"").split(/\s*\/\s*|\s+/).filter(Boolean)}
 function tpFmtDate(iso){const m=/^(\d{4})-(\d{2})-(\d{2})$/.exec(iso||"");return m?{dia:m[3],mes:m[2],ano:m[1],full:`${m[3]}/${m[2]}/${m[1]}`}:null}
 function tpPdfValues(){
   fbNorm();const out={};
   const put=(q,v,boxes)=>{
     if(v===""||v==null||v===false)return;
     boxes=boxes||q.boxes;
-    if(q.type==="Fecha"){const d=tpFmtDate(v);if(!d)return;if(boxes.length>=2&&boxes.every(tpSuffix)){boxes.forEach(b=>out[b]=d[tpSuffix(b)]);return}boxes.forEach(b=>out[b]=d.full);return}
+    if(q.type==="Fecha"){const d=tpFmtDate(v);if(!d)return;if(boxes.length>=2){const rl=boxes.map(b=>fbRoleOf(q,b));if(rl.every(Boolean)){boxes.forEach((b,j)=>{if(d[rl[j]]!=null)out[b]=d[rl[j]]});return}}boxes.forEach(b=>out[b]=d.full);return}
+    {const sl=fbSlots(q);if(sl.length>=2&&boxes.length>=2&&!/opción|Sí \/ No|Casilla/.test(q.type)){const sv=tpSlotVals(q,v);boxes.forEach(b=>{const r=fbRoleOf(q,b);const j=r!=null?sl.indexOf(r):-1;const x=j>=0?sv[j]:"";if(x)out[b]=String(x)});return}}
     if((q.type==="Una opción de una lista"||q.type==="Sí / No")&&q.opts.length&&q.opts.every(o=>o.box!=null)){const o=q.opts.find(o=>o.label===v);if(o)out[o.box]="X";return}
     if(q.type==="Casilla de aceptación"){boxes.forEach(b=>out[b]="X");return}
     boxes.forEach(b=>out[b]=String(v));
@@ -1683,7 +1911,11 @@ async function tpRender(){
   }
   TP.rendered=true;tpUpdate();
 }
-function tpApplyVis(){document.querySelectorAll("#tp-form [data-qw]").forEach(el=>{const q=fbQ(+el.dataset.qw);el.hidden=q?!qVisible(q):false})}
+function tpApplyVis(){
+  document.querySelectorAll("#tp-form [data-sw]").forEach(el=>{const s=ST.S.find(x=>x.id===+el.dataset.sw);el.hidden=s?!condOk(s.cond,0):false});
+  document.querySelectorAll("#tp-form [data-subw]").forEach(el=>{const s=ST.S.find(x=>x.id===+el.dataset.subw);const u=s&&(s.subs||[]).find(x=>x.title===el.dataset.subt);el.hidden=u?!condOk(u.cond,0):false});
+  document.querySelectorAll("#tp-form [data-qw]").forEach(el=>{const q=fbQ(+el.dataset.qw);el.hidden=q?!qVisible(q):false});
+}
 function tpUpdate(){tpApplyVis();
   const pv=tpPdfValues();
   document.querySelectorAll(".tp-v").forEach(d=>{const v=pv[+d.dataset.i];d.textContent=v??"";d.classList.toggle("on",v!=null&&v!=="")});
@@ -1693,7 +1925,7 @@ function tpUpdate(){tpApplyVis();
 function tpPrefill(){
   const m=$("#tp-msg");
   if(!ST.json){m.textContent="No hay JSON cargado en el paso 1: completá el formulario a mano.";return}
-  TP.vals={};TP.count={};TP.codes={};let n=0;
+  TP.vals={};TP.count={};TP.codes={};TP.slots={};let n=0;
   const pick=(q,raw)=>{
     if(raw==null||typeof raw==="object")return"";
     if(q.type==="Sí / No")return raw===true||/^(s|si|sí|true|1)$/i.test(String(raw))?"Sí":"No";
@@ -1712,7 +1944,8 @@ function tpPrefill(){
   tpForm();tpUpdate();
 }
 function tpRead(el){
-  const id=+el.dataset.q,k=+el.dataset.k,q=fbQ(id);let v=el.type==="checkbox"?el.checked:el.value;
+  const id=+el.dataset.q,k=+el.dataset.k;let v=el.type==="checkbox"?el.checked:el.value;
+  if(el.dataset.s!=null){const q=fbQ(id);const sv=TP.slots[id]=TP.slots[id]||(q?tpSlotVals(q,TP.vals[id]).slice():[]);sv[+el.dataset.s]=v;TP.vals[id]=sv.filter(Boolean).join(" ");return}
   if(k>=0){TP.vals[id]=TP.vals[id]||[];TP.vals[id][k]=v}else TP.vals[id]=v;
 }
 $("#tp-form").addEventListener("input",e=>{if(e.target.dataset.q){tpRead(e.target);tpUpdate()}});
@@ -1720,7 +1953,7 @@ $("#tp-form").addEventListener("change",e=>{if(e.target.dataset.q){tpRead(e.targ
 $("#tp-form").addEventListener("click",e=>{const b=e.target.closest("[data-rep]");if(!b)return;const key=b.dataset.rep;const n=(TP.count[key]??1)+(+b.dataset.d);TP.count[key]=Math.max(1,n);
   if(+b.dataset.d<0)ST.Q.forEach(q=>{if(q.rep&&tpRepKey(q)===key&&TP.vals[q.id])TP.vals[q.id].length=TP.count[key]});tpForm();tpUpdate()});
 $("#tp-fill").addEventListener("click",tpPrefill);
-$("#tp-clear").addEventListener("click",()=>{TP.vals={};TP.count={};tpForm();tpUpdate();$("#tp-msg").textContent=""});
+$("#tp-clear").addEventListener("click",()=>{TP.vals={};TP.count={};TP.slots={};tpForm();tpUpdate();$("#tp-msg").textContent=""});
 $("#tp-json-dl").addEventListener("click",()=>rnSave(rnBase()+"_salida.json",JSON.stringify(tpJson(),null,2)).then(()=>{$("#tp-msg").textContent=$("#rn-msg").textContent}));
 $("#tp-pdf-dl").addEventListener("click",async()=>{
   const m=$("#tp-msg");if(!window.PDFLib){m.textContent="No se pudo cargar el editor de PDF. Recargá la página.";return}
