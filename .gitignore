@@ -1,0 +1,11 @@
+# Archivos de clientes: nunca se commitean
+*.pdf
+*.xlsx
+*.xls
+*.json
+!package.json
+!package-lock.json
+
+# Sistema / dependencias
+.DS_Store
+node_modules/
