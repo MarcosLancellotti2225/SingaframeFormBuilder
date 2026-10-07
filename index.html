@@ -13,17 +13,18 @@
   --bg:#f5f6f8; --paper:#ffffff; --ink:#1b1f2a; --muted:#5d6475; --line:#dde1e8; --soft:#eceff4;
   --form:#3346c8; --form-bg:#e9ecfb; --pdf:#a35a00; --pdf-bg:#fbefdc; --json:#17784f; --json-bg:#e2f3ea;
   --warn:#b4231d; --warn-bg:#fbe6e4; --ok:#17784f;
+  --sec0:#eef4fc; --sec1:#eef8f1; --sec2:#fef6ea; --sec3:#f5f0fc; --sec4:#fcf0f3; --sec5:#edf7f8; --sec6:#f8f5ec; --sec7:#f1f2f9; --sec-h:#f2f4f7;
   --sans:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
   --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#12151c; --paper:#1a1e27; --ink:#e7e9ef; --muted:#9aa1b2; --line:#2c3240; --soft:#222733;
   --form:#9aa8ff; --form-bg:#252c52; --pdf:#f0b25e; --pdf-bg:#3a2a12; --json:#6fd3a3; --json-bg:#13362a;
-  --warn:#ff8a80; --warn-bg:#3d1c1a; --ok:#6fd3a3; color-scheme:dark}}
+  --warn:#ff8a80; --warn-bg:#3d1c1a; --ok:#6fd3a3; --sec0:#1e2a3d; --sec1:#1d3027; --sec2:#352b1b; --sec3:#2b2440; --sec4:#3a222a; --sec5:#1b3134; --sec6:#322e20; --sec7:#252838; --sec-h:#262b36; color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#12151c; --paper:#1a1e27; --ink:#e7e9ef; --muted:#9aa1b2; --line:#2c3240; --soft:#222733;
   --form:#9aa8ff; --form-bg:#252c52; --pdf:#f0b25e; --pdf-bg:#3a2a12; --json:#6fd3a3; --json-bg:#13362a;
-  --warn:#ff8a80; --warn-bg:#3d1c1a; --ok:#6fd3a3; color-scheme:dark}
+  --warn:#ff8a80; --warn-bg:#3d1c1a; --ok:#6fd3a3; --sec0:#1e2a3d; --sec1:#1d3027; --sec2:#352b1b; --sec3:#2b2440; --sec4:#3a222a; --sec5:#1b3134; --sec6:#322e20; --sec7:#252838; --sec-h:#262b36; color-scheme:dark}
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:15px/1.6 var(--sans);padding-inline:16px;padding-block:28px 64px}
 .wrap{max-width:1120px;margin:0 auto;display:grid;gap:56px}
@@ -255,7 +256,7 @@ button.btn.on{border-color:#7b3fe4;color:#7b3fe4;background:rgba(123,63,228,.08)
 .f2-pres{display:flex;flex-wrap:wrap;gap:4px;max-height:84px;overflow:auto}
 .f2-empty{color:var(--muted);font-size:13px;padding:12px;margin:0}
 .f2s{border-bottom:1px solid var(--line)}
-.f2s-h{display:flex;align-items:center;gap:6px;padding:8px 8px;background:var(--soft);position:sticky;top:0;z-index:1;cursor:grab}
+.f2s-h{display:flex;align-items:center;gap:6px;padding:8px 8px;background:var(--secbg,var(--soft));position:sticky;top:0;z-index:1;cursor:grab}
 .f2s.act .f2s-h{box-shadow:inset 3px 0 0 #7b3fe4}
 .f2s-t{flex:1;min-width:0;font:600 14px var(--sans);color:var(--ink);background:transparent;border:1px solid transparent;border-radius:5px;padding:3px 5px}
 .f2s-t:hover,.f2s-t:focus{border-color:var(--line);background:var(--paper)}
@@ -303,7 +304,7 @@ button.btn.on{border-color:#7b3fe4;color:#7b3fe4;background:rgba(123,63,228,.08)
 .rn-box.fb.hit{outline:3px solid #e38b00;outline-offset:1px;z-index:2}
 .rn-box.flash{animation:fl .9s}
 @keyframes fl{0%,100%{box-shadow:none}50%{box-shadow:0 0 0 6px rgba(227,139,0,.6)}}
-.f2sub{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 10px 2px 30px}
+.f2sub{display:flex;align-items:center;gap:6px;flex-wrap:wrap;padding:8px 10px 2px 30px;border-left:4px solid var(--secbg,transparent)}
 .f2sub-t{all:unset;cursor:pointer;font:600 12px var(--sans);color:#7b3fe4;text-transform:uppercase;letter-spacing:.04em}
 .f2sub-t:focus-visible,.f2fold:focus-visible{outline:2px solid #7b3fe4;outline-offset:2px}
 .f2sub .cnt{margin-left:auto}
@@ -943,6 +944,7 @@ const JS_SAMPLE=`{
 }`;
 function jsFlat(o,p,acc,inArr){
   if(Array.isArray(o)){
+    if(o.length===1){jsFlat(o[0],p+"[0]",acc,inArr);return acc}
     const base=p+"[]";const seen=new Set(acc.map(a=>a.path));
     if(!o.length){acc.push({path:base,ex:"[]",arr:true});return acc}
     o.forEach(el=>{const sub=[];jsFlat(el,base,sub,true);sub.forEach(s=>{if(!seen.has(s.path)){seen.add(s.path);acc.push(s)}})});
@@ -954,7 +956,7 @@ function jsFlat(o,p,acc,inArr){
 function jsRead(){
   const t=$("#js-in").value.trim();const m=$("#js-msg");
   if(!t){ST.paths=[];ST.json=null;jsList();m.textContent="";return}
-  try{ST.json=JSON.parse(t);ST.paths=jsFlat(ST.json,"",[]);m.textContent="";m.style.color="";jsList();if(ST.Q.length)ST.Q.forEach(f2AutoJson)}
+  try{ST.json=JSON.parse(t);ST.paths=jsFlat(ST.json,"",[]);const has=x=>ST.paths.some(p=>p.path===x);ST.Q.forEach(q=>{if(q.json&&!has(q.json)&&q.json.includes("[]")){const alt=q.json.replace("[]","[0]");if(has(alt)){q.json=alt;if(!q._subRep&&!q.parentId)q.repeat=false}}});m.textContent="";m.style.color="";jsList();if(ST.Q.length)ST.Q.forEach(f2AutoJson)}
   catch(e){m.textContent="No es un JSON válido: revisá comas, comillas y llaves.";m.style.color="var(--warn)";ST.paths=[];jsList()}
 }
 function jsList(){
@@ -1009,7 +1011,7 @@ function fbNorm(){
   ST.Q.forEach(q=>{if(q.parentId||!q.sub)return;const s=ST.S.find(x=>x.id===q.sid);if(s&&!s.subs.some(u=>u.title===q.sub))s.subs.push(fbNewSub(q.sub))});
   ST.Q.filter(q=>!q.parentId).forEach(q=>{const{sub}=fbArea(q);const sr=sub&&+sub.rep>0?+sub.rep:0;
     if(sr){q.repeat=true;q._subRep=true}else if(q._subRep){q.repeat=false;delete q._subRep}
-    q.rep=q.repeat?(sr||q.boxes.length||5):0});
+    q.rep=q.repeat?(sr||+q.repMax||q.boxes.length||5):0});
   ST.Q.filter(q=>q.parentId).forEach(q=>{const par=fbQ(q.parentId);if(!par)return;q.sid=par.sid;q.repeat=par.repeat;q.rep=par.rep});
 }
 /* Fecha en 3 casilleros y preguntas que en el PDF van partidas («En el PDF va partido en») */
@@ -1137,7 +1139,7 @@ function f2Form(){
       const col=!qs&&ST.coll.has(s.id+"|"+g.t);
       const head=g.u?`<div class="f2sub"><button class="f2sub-t" data-subfold="${esc(g.t)}" aria-expanded="${!col}">${col?"▸":"▾"} ${esc(g.t)}</button>${g.u.hidden?'<span class="hidb">oculta</span>':""}${+g.u.rep>0?`<span class="pchip">se repite hasta ${g.u.rep}</span>`:""}${f2CondChip(g.u)}<span class="cnt">${gq.filter(q=>!q.parentId).length}</span></div>`:"";
       return`<div class="f2sub-g" data-sub="${esc(g.t)}">${head}${col?"":gq.map(f2Card).join("")}</div>`}).join("");
-    return `<div class="f2s${s.id===ST.activeS?" act":""}" data-sid="${s.id}">
+    return `<div class="f2s${s.id===ST.activeS?" act":""}" data-sid="${s.id}" style="--secbg:var(${s.hidden?"--sec-h":"--sec"+(si%8)})">
       <div class="f2s-h" draggable="true" data-sdrag="${s.id}"><span class="grip" title="Arrastrá para mover la sección">⋮⋮</span><button class="mini f2fold" data-sact="fold" aria-expanded="${!fold}" aria-label="${fold?"Abrir":"Cerrar"} la sección">${fold?"▸":"▾"}</button><input class="f2s-t" data-sid="${s.id}" value="${esc(s.title)}" aria-label="Nombre de la sección">${s.hidden?'<span class="hidb">oculta</span>':""}${f2CondChip(s)}<span class="cnt">${items.filter(q=>!q.parentId).length}</span>
         <button class="mini" data-sact="up" ${si===0?"disabled":""} aria-label="Subir sección">↑</button><button class="mini" data-sact="down" ${si===ST.S.length-1?"disabled":""} aria-label="Bajar sección">↓</button><button class="mini${s.hidden?" hid":""}" data-sact="hide" title="Una sección oculta no se le muestra a la persona, pero sus datos van al PDF y al JSON">${s.hidden?"Oculta":"Visible"}</button><button class="mini" data-sact="del" aria-label="Borrar sección">Borrar</button></div>
       <div class="f2s-b" data-drop="${s.id}">${fold?"":(body||`<p class="f2-empty">Sección vacía. Escribí una pregunta arriba o arrastrá una acá.</p>`)}</div></div>`}).join("");
@@ -1146,7 +1148,7 @@ function f2Form(){
 function f2Card(q){
   const parts=fbParts(q);const sel=q.id===ST.selQ,open=q.id===ST.open;
   const pdf=q.parentId?`<span class="pchip">PDF: junto con «${esc((fbQ(q.parentId)||{}).label)}»</span>`:(q.inPdf===false&&!q.boxes.length)?`<span class="pchip">PDF: no va</span>`:q.boxes.length?`<span class="pchip ok">PDF: ${q.boxes.length}${q.repeat?" filas":""}</span>`:`<span class="pchip none">PDF: —</span>`;
-  const js=q.json?`<span class="jchip ${q.jsonOk?"ok":"sug"}">${q.jsonOk?"✓ ":"¿"}${esc(q.json)}${q.jsonOk?"":"?"}</span>${q.jsonOk?"":`<button class="mini ok" data-act="okj" title="Confirmar este dato del JSON">✓ Aceptar</button><button class="mini" data-act="nojson" title="Descartar la sugerencia" aria-label="Descartar">×</button>`}`:`<span class="jchip none">JSON: —</span>`;
+  const js=q.json?`<span class="jchip ${q.jsonOk?"ok":"sug"}">${q.jsonOk?"✓ ":"¿"}${esc(tplPath(q.json))}${q.jsonOk?"":"?"}</span>${q.jsonOk?"":`<button class="mini ok" data-act="okj" title="Confirmar este dato del JSON">✓ Aceptar</button><button class="mini" data-act="nojson" title="Descartar la sugerencia" aria-label="Descartar">×</button>`}`:`<span class="jchip none">JSON: —</span>`;
   return `<div class="f2q${sel?" sel":""}${q.parentId?" part":""}${parts.length?" joined":""}" data-id="${q.id}" ${q.parentId?"":'draggable="true"'}>
     <div class="f2q-row">${q.parentId?'<span class="grip">↳</span>':'<span class="grip" title="Arrastrá para mover">⋮⋮</span>'}<span class="ti" title="${esc(q.type)}">${f2TypeIcon(parts.length?"Texto corto":q.type)}</span>
       <span class="lb">${esc(q.label)}${q.req&&!parts.length?'<b class="req">*</b>':""}</span>
@@ -1164,7 +1166,7 @@ function f2Editor(q){
       <label>Tipo<select data-e="type">${TIPOS.map(t=>`<option${t===q.type?" selected":""}>${esc(t)}</option>`).join("")}</select></label>
       ${q.parentId?"":`<label>Sección<select data-e="sid">${ST.S.map(s=>`<option value="${s.id}"${s.id===q.sid?" selected":""}>${esc(s.title)}</option>`).join("")}</select></label>`}</div>
     ${q.parentId?"":`<div class="f2e-g"><label>Subsección<input data-e="sub" value="${esc(q.sub||"")}" list="f2-subs-${q.sid}" placeholder="Opcional"><datalist id="f2-subs-${q.sid}">${((ST.S.find(s=>s.id===q.sid)||{}).subs||[]).map(u=>u.title).map(v=>`<option value="${esc(v)}">`).join("")}</datalist></label><label>Origen<select data-e="origin">${ORIGENES.map(o=>`<option${o===(q.origin||ORIGENES[0])?" selected":""}>${o}</option>`).join("")}</select></label></div>`}
-    <div class="f2e-c"><label><input type="checkbox" data-e="req" ${q.req?"checked":""}> Obligatoria</label>${q.parentId?"":`<label><input type="checkbox" data-e="inpdf" ${q.inPdf!==false?"checked":""}> Se ve en el PDF</label><label><input type="checkbox" data-e="repeat" ${q.repeat?"checked":""}> Se repite (una fila por casillero)</label><label><input type="checkbox" data-e="oculto" ${q.oculto?"checked":""}> Dato oculto (no se le muestra)</label>`}</div>
+    <div class="f2e-c"><label><input type="checkbox" data-e="req" ${q.req?"checked":""}> Obligatoria</label>${q.parentId?"":`<label><input type="checkbox" data-e="inpdf" ${q.inPdf!==false?"checked":""}> Se ve en el PDF</label><label><input type="checkbox" data-e="repeat" ${q.repeat?"checked":""}> Se repite (una fila por casillero)</label>${q.repeat?`<label>Máximo <input type="number" data-e="repmax" min="1" max="99" value="${q.rep||5}" style="width:64px"></label>`:""}<label><input type="checkbox" data-e="oculto" ${q.oculto?"checked":""}> Dato oculto (no se le muestra)</label>`}</div>
     ${q.parentId?"":(()=>{const c=q.cond||{};const t=c.qid?fbQ(c.qid):null;const cands=fbOrdered().filter(x=>x!==q&&!x.parentId&&!fbParts(x).length);
       const valCtl=t&&t.opts.length?`<select data-e="cval"><option value="">—</option>${t.opts.map(o=>`<option${o.label===c.val?" selected":""}>${esc(o.label)}</option>`).join("")}</select>`:t&&t.type==="Sí / No"?`<select data-e="cval"><option value="">—</option><option${c.val==="Sí"?" selected":""}>Sí</option><option${c.val==="No"?" selected":""}>No</option></select>`:`<input data-e="cval" value="${esc(c.val||"")}" placeholder="Valor">`;
       return `<div class="f2e-blk"><div class="f2e-h">Visibilidad</div><div class="f2e-cond"><span class="hint">Se muestra si</span><select data-e="cq"><option value="">siempre</option>${cands.map(x=>`<option value="${x.id}"${x.id===c.qid?" selected":""}>${esc(x.label)}</option>`).join("")}</select>${t?`<select data-e="cop">${CONDOPS.map(o=>`<option${o===(c.op||CONDOPS[0])?" selected":""}>${o}</option>`).join("")}</select>${/igual/.test(c.op||CONDOPS[0])?valCtl:""}`:""}</div></div>`})()}
@@ -1175,7 +1177,7 @@ function f2Editor(q){
       <div class="chips">${q.boxes.map(i=>`<span class="bchip">${esc(rn.rows[i].nuevo)}${f2RoleSel(q,i)}<button data-act="unbox" data-i="${i}" aria-label="Quitar casillero">×</button></span>`).join("")||'<span class="hint">Sin casilleros. Tocá casilleros libres en el PDF para sumarlos.</span>'}</div>
       ${sugB.length?`<div class="chips sug"><span class="hint">Sugeridos:</span>${sugB.map(i=>`<button class="bchip add" data-act="addbox" data-i="${i}">+ ${esc(rn.rows[i].nuevo)}</button>`).join("")}</div>`:""}`}</div>
     <div class="f2e-blk"><div class="f2e-h">JSON</div>
-      ${q.json?`<div class="chips"><span class="jchip ${q.jsonOk?"ok":"sug"}">${esc(q.json)}</span>${q.jsonOk?"":`<button class="mini" data-act="okj">Confirmar</button>`}<button class="mini" data-act="nojson">Quitar</button></div>`:`<span class="hint">${ST.paths.length?"Tocá un dato en el panel del JSON para unirlo.":"No hay JSON cargado."}</span>`}</div>
+      ${q.json?`<div class="chips"><span class="jchip ${q.jsonOk?"ok":"sug"}">${esc(tplPath(q.json))}</span>${q.jsonOk?"":`<button class="mini" data-act="okj">Confirmar</button>`}<button class="mini" data-act="nojson">Quitar</button></div>`:`<span class="hint">${ST.paths.length?"Tocá un dato en el panel del JSON para unirlo.":"No hay JSON cargado."}</span>`}</div>
     ${canSplit?`<div class="f2e-blk"><div class="f2e-h">Partes ${parts.length?"":"<span class='hint'>(opcional)</span>"}</div>
       ${parts.length?`<div class="f2e-parts">${parts.map((p,k)=>`<div class="f2e-opt"><input data-p="${p.id}" value="${esc(p.label)}" aria-label="Parte ${k+1}"><button class="mini" data-act="delpart" data-pid="${p.id}" aria-label="Quitar parte">×</button></div>`).join("")}</div>
         <div class="f2e-c"><button class="mini" data-act="addpart">+ Parte</button><label>Entre partes <select data-e="sep">${[[" ","espacio"],[", ","coma"],[" - ","guion"],["","nada"]].map(([v,l])=>`<option value="${v}"${(q.sep??" ")===v?" selected":""}>${l}</option>`).join("")}</select></label><button class="mini" data-act="join">Volver a una sola pregunta</button></div>
@@ -1229,7 +1231,7 @@ function f2Json(){
   const by=new Map();ST.Q.forEach(q=>{if(q.json)by.set(q.json,q)});
   const fil=$("#f2-jf").value;
   box.innerHTML=ST.paths.filter(p=>(!js||p.path.toLowerCase().includes(js)||String(p.ex).toLowerCase().includes(js))&&(fil==="all"||(fil==="free"&&!by.has(p.path))||(fil==="used"&&by.has(p.path)))).map(p=>{const u=by.get(p.path);const mine=sel&&u&&u.id===sel.id;
-    return `<div class="jp${u?" used":""}${mine?" mine":""}" data-path="${esc(p.path)}"><button class="jp-m" data-path="${esc(p.path)}"><span class="mono">${esc(p.path)}${p.arr?' <span class="tag">se repite</span>':""}</span><span class="ex">${esc(typeof p.ex==="string"?p.ex:JSON.stringify(p.ex))}${u?` · ${esc(u.label)}${u.jsonOk?"":" (sugerido)"}`:""}</span></button><button class="mini" data-newq="${esc(p.path)}" title="Crear una pregunta con este dato">+ pregunta</button></div>`}).join("")||'<p class="f2-empty">Nada coincide con la búsqueda.</p>';
+    return `<div class="jp${u?" used":""}${mine?" mine":""}" data-path="${esc(p.path)}"><button class="jp-m" data-path="${esc(p.path)}"><span class="mono">${esc(tplPath(p.path))}${p.arr?' <span class="tag">se repite</span>':""}</span><span class="ex">${esc(typeof p.ex==="string"?p.ex:JSON.stringify(p.ex))}${u?` · ${esc(u.label)}${u.jsonOk?"":" (sugerido)"}`:""}</span></button><button class="mini" data-newq="${esc(p.path)}" title="Crear una pregunta con este dato">+ pregunta</button></div>`}).join("")||'<p class="f2-empty">Nada coincide con la búsqueda.</p>';
 }
 function f2Stats(){
   const roots=ST.Q.filter(q=>!q.parentId);const asked=ST.Q.filter(q=>!fbParts(q).length);
@@ -1315,6 +1317,7 @@ $("#f2-form").addEventListener("change",e=>{
   if(k==="sub"){q.sub=t.value.trim();f2Form();return}
   if(k==="role"){q.roles=q.roles||{};if(t.value)q.roles[+t.dataset.i]=t.value;else delete q.roles[+t.dataset.i];return}
   if(k==="split"){q.split=t.value.trim();f2Form();return}
+  if(k==="repmax"){const n=parseInt(t.value,10);if(n>0)q.repMax=n;else delete q.repMax;fbNorm();return}
   if(k==="oculto"){q.oculto=t.checked;f2Form();return}
   if(k==="fmt"){q.fmt=t.value;return}
   if(k==="rule"){q.rule=t.value;return}
@@ -1355,7 +1358,7 @@ $("#f2-json").addEventListener("click",e=>{
   const b=e.target.closest(".jp-m");if(!b)return;const path=b.dataset.path;const sel=fbQ(ST.selQ);
   if(!sel){m.textContent="Elegí primero una pregunta, o usá «+ pregunta» para crear una con este dato.";return}
   const prev=ST.Q.find(q=>q.json===path);if(prev&&prev!==sel){prev.json=null;prev.jsonOk=false}
-  sel.json=path;sel.jsonOk=true;m.textContent=`«${sel.label}» ↔ ${path}`;fbAll();
+  sel.json=path;sel.jsonOk=true;if(path.includes("[]")&&!sel.parentId)sel.repeat=true;m.textContent=`«${sel.label}» ↔ ${path}`;fbAll();
 });
 let f2RT;window.addEventListener("resize",()=>{clearTimeout(f2RT);f2RT=setTimeout(()=>{if(ST.cur===2&&rn.pdf){ST.pdfDone=false;f2RenderPdf()}},250)});
 
@@ -1391,7 +1394,7 @@ async function f2Excel(msgEl){
   [["Formulario","Secciones y preguntas, con su PDF y su JSON"],["Opciones","Opciones de cada lista, con código y casilla del PDF"],["JSON del cliente","Cada dato del JSON y la pregunta que lo llena"],["Casilleros PDF","Nombre original y nuevo de cada casillero"],["Pendientes","Lo que falta resolver"]].forEach(([a,b])=>{const c=p0.getCell(`B${r}`);c.value={text:a,hyperlink:`#'${a}'!A1`};c.font=font({color:{argb:"FF2F6FD6"},underline:true});p0.getCell(`C${r}`).value=b;r++});
   /* Formulario */
   const w1=wb.addWorksheet("Formulario",{views:[{state:"frozen",ySplit:2,xSplit:4}],properties:{tabColor:{argb:C.blue}}});
-  const cols1=[["ID",8],["Sección",22],["Subsección",18],["#",5],["Pregunta",34],["Tipo de respuesta",22],["Obligatoria",11],["Origen",20],["Se repite",10],["Se arma con / parte de",28],["Se muestra si",32],["Opciones",30],["Reglas / formato",22],["Valor o cálculo",18],["Se ve en el PDF",10],["Casilleros del PDF",42],["Estado PDF",12],["Dato del JSON",40],["Estado JSON",13],["Notas",28]];
+  const cols1=[["ID",8],["Sección",22],["Subsección",18],["#",5],["Pregunta",34],["Tipo de respuesta",22],["Obligatoria",11],["Origen",20],["Se repite",10],["Se arma con / parte de",28],["Se muestra si",32],["Opciones",30],["Reglas / formato",22],["Valor o cálculo",18],["Se ve en el PDF",10],["Casilleros del PDF",42],["Estado PDF",12],["Ruta JSON",40],["Estado JSON",13],["Notas",28]];
   const NC=cols1.length;
   w1.columns=cols1.map(([,w])=>({width:w}));
   band(w1,1,1,14,"FORMULARIO",C.blue);band(w1,1,15,17,"PDF",C.amber);band(w1,1,18,19,"JSON",C.green);band(w1,1,20,20,"",C.gray);
@@ -1408,7 +1411,7 @@ async function f2Excel(msgEl){
       const pdfOk=par||!inPdf?"No aplica":q.boxes.length?"Asignado":"Falta";
       const vals=[pid.get(q.id),s.title,par?"":(q.sub||""),q.parentId?"":k,(q.parentId?"   ↳ ":"")+q.label,parts.length?"Se arma con las partes":q.type,parts.length?"—":q.req?"Sí":"No",par?"":(q.origin||"La completa la persona"),q.repeat?`Sí (${q.rep})`:"No",
         parts.length?parts.map(p=>p.label).join(" + ")+(q.sep?` (separa «${q.sep}»)`:""):par?`Parte de ${pid.get(par.id)} ${par.label}`:"",
-        condText(q),q.opts.map(o=>o.label+(o.code?` = ${o.code}`:"")).join("\n"),q.rule||q.fmt||"",q.calc||q.maxLen||"",inPdf?"Sí":"No",(par?"":q.boxes.map(i=>{const ro=fbRoleOpts(q)?fbRoleOf(q,i):null;return rn.rows[i].nuevo+(ro?` (${fbRoleLabel(q,ro)})`:"")}).join("\n")),"",q.json||"","",q.notes||""];
+        condText(q),q.opts.map(o=>o.label+(o.code?` = ${o.code}`:"")).join("\n"),q.rule||q.fmt||"",q.calc||q.maxLen||"",inPdf?"Sí":"No",(par?"":q.boxes.map(i=>{const ro=fbRoleOpts(q)?fbRoleOf(q,i):null;return rn.rows[i].nuevo+(ro?` (${fbRoleLabel(q,ro)})`:"")}).join("\n")),"",tplPath(q.json),"",q.notes||""];
       vals.forEach((v,c)=>{const cell=w1.getCell(row,c+1);cell.value=v;cell.font=font(q.parentId?{color:{argb:C.gray}}:{});cell.border=BOX;cell.alignment={vertical:"top",wrapText:true};if(k%2===0&&!q.parentId)cell.fill=F("FFF7F8FA")});
       if(q.cond&&q.cond.qid){const cc=w1.getCell(row,11);cc.font=font({color:{argb:"FF5B2DB8"}})}
       stCell(w1.getCell(row,17),pdfOk);
@@ -1431,7 +1434,7 @@ async function f2Excel(msgEl){
   const w3=wb.addWorksheet("JSON del cliente",{views:[{state:"frozen",ySplit:1}],properties:{tabColor:{argb:C.green}}});
   w3.columns=[{width:46},{width:28},{width:11},{width:34},{width:15}];
   hdr(w3,1,["Ruta","Valor de ejemplo","Se repite","Pregunta que lo llena","Estado"],[C.green,C.green,C.green,C.blue,C.green]);
-  ST.paths.forEach((p,k)=>{const q=by.get(p.path);const rr=k+2;[p.path,typeof p.ex==="string"?p.ex:JSON.stringify(p.ex),p.arr?"Sí":"No",q?`${pid.get(q.id)} ${q.label}`:"— sin pregunta —"].forEach((v,c)=>{const cell=w3.getCell(rr,c+1);cell.value=v;cell.font=font(c===0?{name:"Consolas",size:9}:{});cell.border=BOX});stCell(w3.getCell(rr,5),q?(q.jsonOk?"Unido":"Sugerido"):"Sin pregunta")});
+  ST.paths.forEach((p,k)=>{const q=by.get(p.path);const rr=k+2;[tplPath(p.path),typeof p.ex==="string"?p.ex:JSON.stringify(p.ex),p.arr?"Sí":"No",q?`${pid.get(q.id)} ${q.label}`:"— sin pregunta —"].forEach((v,c)=>{const cell=w3.getCell(rr,c+1);cell.value=v;cell.font=font(c===0?{name:"Consolas",size:9}:{});cell.border=BOX});stCell(w3.getCell(rr,5),q?(q.jsonOk?"Unido":"Sugerido"):"Sin pregunta")});
   if(!ST.paths.length){w3.getCell("A2").value="No se cargó un JSON del cliente.";w3.getCell("A2").font=font({italic:true,color:{argb:C.gray}})}
   w3.autoFilter={from:{row:1,column:1},to:{row:1,column:5}};
   /* Casilleros */
@@ -1550,16 +1553,11 @@ async function f2TplUploadV1(file){
   fbAll();
 }
 
-/* ── Plantilla v2: Secciones → Subsecciones → Preguntas (formato de docs/plantilla_referencia_v9_1.xlsx) ── */
+/* ── Plantilla: tipos, prellenado y reglas (compartido por todos los formatos) ── */
 const SYS_SEC="Datos del sistema (oculto)";
 const TPL_TIPOS=["Texto corto","Texto largo","Número","Fecha","Email","Teléfono","Una opción de una lista","Una opción (botones)","Varias opciones","Sí / No","Casilla de verificación","Texto informativo","Firma","Dato oculto"];
 const TPL_TIPO_OUT={"Importe":"Número","Porcentaje":"Número","Hora":"Texto corto","Varias opciones de una lista":"Varias opciones","Casilla de aceptación":"Casilla de verificación"};
 const TPL_TIPO_IN={"Una opción (botones)":"Una opción de una lista","Varias opciones":"Varias opciones de una lista","Casilla de verificación":"Casilla de aceptación"};
-const REF_SECS=[["Datos del sistema (oculto)", "Encabezado", true, "", "", "Lo completa Namirial desde el JSON"], ["Datos del sistema (oculto)", "Personas (por cada persona)", true, "", "", ""], ["Datos del sistema (oculto)", "Dirección y notificación", true, "", "", ""], ["Datos Generales", "Información de la Solicitud", false, "", "", ""], ["Información de Póliza", "Datos del Asesor", false, "", "", ""], ["Información de Póliza", "Datos de la Póliza", false, "", "", ""], ["Información de Póliza", "Información adicional", false, "", "", ""], ["Datos del Tomador", "Datos Tomador", false, "", "si ¿El asegurado es el tomador? = No", "Ejemplo de sección condicional"], ["Datos del Tomador", "Contacto y ubicación", false, "", "", ""], ["Datos del Asegurado", "Datos Asegurado", false, "", "", ""], ["Datos del Asegurado", "Contacto y ubicación", false, "", "", ""], ["Datos del Asegurado", "Preferencias de notificación", false, "", "", ""], ["Datos del Dependiente", "Datos Dependiente", false, "", "", ""], ["Datos del Dependiente", "Contacto y ubicación", false, "", "", ""], ["Datos del Beneficiario", "Datos Beneficiario", false, "5", "", "Se cargan las preguntas una vez"], ["Datos del Beneficiario", "Contacto y ubicación", false, "", "", ""], ["Información del riesgo", "Información del riesgo", false, "", "", ""], ["Información del riesgo", "Coberturas Básicas", false, "", "", ""], ["Información del riesgo", "Coberturas Adicionales", false, "", "", ""], ["Declaraciones y Autorización", "Autorizaciones", false, "", "", ""], ["Declaraciones y Autorización", "Declaraciones Legales", false, "", "", ""]];
-const SEC_HELP=["Secciones y subsecciones del formulario", "Sección = paso / pantalla del formulario web (en el machote: \"Pasos Formulario\"). Subsección = bloque dentro de la sección (en el machote: \"Sección\").", "El orden de las filas es el orden del formulario. Si una sección no aplica, poné ¿Va? = No. Las filas grises son ocultas y las completa Namirial.", "Las subsecciones de una misma sección van una debajo de la otra: así se agrupan y la lista de la hoja Preguntas las muestra juntas."];
-const PRE_HELP=["Preguntas del formulario", "Una fila por pregunta. Elegí primero la Sección: la lista de Subsección muestra solo las de esa sección (salen de la hoja Secciones). Mantené juntas las filas de una misma sección. El orden de las filas es el orden dentro de cada subsección.", "Cada subsección se pinta como un bloque (celeste / blanco alternado) y una línea marca dónde empieza. Las filas cargadas son de ejemplo. Las grises (Tipo = Dato oculto) las completa Namirial: en Reglas / formato dice de dónde sale cada dato."];
-const EQUIV=[["En la ficha del INS (machote)", "En esta plantilla", "Comentario"], ["Pasos Formulario", "Sección", "Una pantalla del formulario web."], ["Sección", "Subsección", "Un bloque dentro de la sección."], ["Paso / Sección = \"JSON\"", "Sección \"Datos del sistema (oculto)\" (filas grises)", "Lo completa Namirial desde el JSON: valor fijo, viene del sistema o se calcula."], ["Una hoja por bloque del JSON (encabezado, personas, direccion…)", "Hoja Preguntas, ordenada como el formulario", "La ruta del JSON la conectamos nosotros."], ["Nombre del campo en formulario", "Pregunta", ""], ["Tipo de dato", "Tipo", "Lista cerrada (Combo → Una opción de una lista; Combo/Radio → Una opción (botones))."], ["Valor (una fila por opción)", "Opciones (en una sola celda)", "Ej.: Física=0; DIMEX=6."], ["Obligatorio (Both / WEB / JSON / None)", "Obligatoria (Sí / No)", ""], ["Visualización: Disabled / Dato Prellenado / editable", "Viene prellenado + Se puede editar", "Dos columnas Sí/No."], ["Regla (texto libre con condiciones)", "Se muestra si + Reglas / formato", "La condición va separada del formato."], ["Secciones que aparecen según una respuesta", "Se muestra si, en la hoja Secciones", "Ej.: Datos del Tomador si ¿El asegurado es el tomador? = No."], ["Fecha: día/mes/año (3 casilleros)", "Una pregunta Fecha", "El reparto al PDF lo hace la herramienta."], ["Bloques repetidos (zonas, beneficiarios)", "Se repite hasta, en la hoja Secciones", "Se cargan una sola vez."], ["Formulario a visualizar (TODOS / Abreviado / Completo…)", "Una plantilla por formulario", ""], ["Nombre en PDF / Ruta JSON", "No se piden", "Los conectamos nosotros en la herramienta."]];
-const EQUIV_H=[31.5, 15.0, 15.0, 23.85, 23.85, 15.0, 23.85, 15.0, 15.0, 23.85, 15.0, 23.85, 15.0, 15.0, 23.85, 15.0];
 const tplTypeOf=(type,ui)=>type==="Una opción de una lista"&&ui==="botones"?"Una opción (botones)":(TPL_TIPO_OUT[type]||type);
 function tplType(q){return q.oculto||fbHiddenArea(q)?"Dato oculto":tplTypeOf(q.type,q.ui)}
 function fromTplType(t,q,areaHidden){
@@ -1580,17 +1578,6 @@ function tplRule(q){
   if(q.rule&&OCULTO_ORIG.some(o=>fbSlug(q.rule).startsWith(fbSlug(o))))return q.rule;
   return (q.hiddenSrc||(/calcula/i.test(q.origin||"")?"Se calcula":"Viene del sistema"))+(q.calc?` · ${q.calc}`:"");
 }
-function fbRefSecs(){
-  const out=[];
-  /* solo la estructura: las condiciones y notas «Ejemplo…» de la referencia apuntan a preguntas que todavía no existen */
-  REF_SECS.forEach(([t,sub,hid,rep,cond,notes])=>{
-    let s=out.find(x=>x.title===t);const u=fbNewSub(sub);u.rep=+rep||0;notes=/^ejemplo/i.test(notes)?"":notes;
-    if(!s){s={id:ST.nid++,title:t,hidden:hid,cond:null,condTxt:"",notes,subs:[],_ref:true};out.push(s)}
-    else{u.hidden=hid&&!s.hidden;u.notes=notes}
-    s.subs.push(u);
-  });
-  return out;
-}
 function fbFillSubs(){
   ST.Q.forEach(q=>{if(q.parentId||q.sub)return;const s=ST.S.find(x=>x.id===q.sid);if(!s)return;q.sub=(s.subs&&s.subs[0]&&s.subs[0].title)||s.title});
   fbNorm();ST.S.forEach(s=>{if(!s.subs.length)s.subs.push(fbNewSub(s.title))});
@@ -1603,15 +1590,37 @@ function f2HiddenSid(){
 function f2SysSub(path){
   const p=fbSlug(path);
   if(/direcc|domicil|notific|provinc|canton|distrit|ciudad/.test(p))return"Dirección y notificación";
-  if(/persona|cliente|asegurad|tomador|benefic|dependient|nombre|apellid|identific|genero|civil|parentes/.test(p))return"Personas (por cada persona)";
+  if(/persona|cliente|asegurad|tomador|benefic|dependient|nombre|apellid|identific|genero|civil|parentes/.test(p))return"Personas";
   return"Encabezado";
+}
+/* ── Plantilla v12: una hoja «Preguntas» + «JSON del cliente» + «Cómo se completa» + «Listas» (formato de docs/plantilla_referencia_v12.xlsx) ── */
+const PRE_HELP12=["Preguntas del formulario", "Una fila por pregunta, en el orden en que aparecen. Elegí la Sección y después la Subsección (la lista muestra solo las de esa sección). Para agregar: clic derecho en el número de fila → Insertar. Cada sección tiene su color (aunque agregues filas al final, toman el color de su sección). Al subir la planilla, la herramienta agrupa sola por Sección y Subsección.", "Ruta JSON: elegila de la lista (sale de tu JSON) y en \"Valor en el JSON\" vas a ver el dato de ejemplo. Si una ruta tiene [i], la pregunta se repite (ej. varios bienes). Las filas grises son datos ocultos: los completa Namirial."];
+const JSON_HELP12=["Lo que trae tu JSON", "Se arma solo a partir del JSON que cargaste. No hace falta editar esta hoja.", "\"¿Se usa?\" dice si alguna pregunta ya tomó esa ruta. Las que quedan en No, Namirial las revisa y las suma a los datos ocultos si corresponde."];
+const COMO12=[["Columna", "Qué poner", "En el machote del INS"], ["Sección", "La pantalla del formulario. Elegila de la lista; se puede escribir una nueva.", "Pasos Formulario"], ["Subsección", "El bloque dentro de la pantalla. La lista muestra solo las de la sección elegida.", "Sección"], ["Pregunta", "Cómo la ve la persona.", "Nombre del campo en formulario"], ["Tipo", "De la lista. Una fecha es una sola pregunta de tipo Fecha.", "Tipo de dato"], ["Opciones", "Para listas: opción=código separadas por punto y coma. Ej.: Masculino=M; Femenino=F. O \"Ver catálogo\".", "Valor (una fila por opción)"], ["Obligatoria", "Sí / No.", "Obligatorio (Both / WEB / JSON / None)"], ["Viene prellenado / Se puede editar", "Sí / No en cada una.", "Visualización (Disabled / Dato Prellenado / editable)"], ["Se muestra si", "Si depende de otra respuesta. Ej.: si ¿Tiene pólizas con otra compañía aseguradora? = Sí", "Regla"], ["Ruta JSON", "De la lista: sale de tu JSON. [i] = se repite (ej. bienes).", "Nombre de la sección del JSON"], ["Valor en el JSON", "Se completa solo. Si dice \"no está en el JSON\", revisá la ruta.", ""], ["En el PDF va partido en", "Solo si en el PDF va en varios casilleros. Ej.: día / mes / año.", "Nombre en PDF"], ["Reglas / formato", "Ej.: 9 dígitos · máx. 50 · email.", "Regla"], ["¿Va?", "No = se saca del formulario.", ""], ["ID (no tocar)", "Lo usa la herramienta para no perder lo ya conectado. En filas nuevas, dejalo vacío.", ""], ["Filas grises", "Datos ocultos (Datos del sistema). Los completa Namirial.", "Pasos / Sección = JSON"]];
+const COMO12_H=[31.5, 15.0, 15.0, 15.0, 15.0, 23.85, 15.0, 23.85, 23.85, 15.0, 15.0, 15.0, 15.0, 15.0, 15.0, 15.0];
+const MACHOTE12=[["Datos del sistema (oculto)", "Encabezado"], ["Datos del sistema (oculto)", "Personas"], ["Datos del sistema (oculto)", "Dirección y notificación"], ["Datos Generales", "Información de la Solicitud"], ["Información de Póliza", "Datos del Asesor"], ["Información de Póliza", "Datos de la Póliza"], ["Información de Póliza", "Información adicional"], ["Datos del Tomador", "Datos Tomador"], ["Datos del Tomador", "Contacto y ubicación"], ["Datos del Asegurado", "Datos Asegurado"], ["Datos del Asegurado", "Contacto y ubicación"], ["Datos del Asegurado", "Preferencias de notificación"], ["Datos del Dependiente", "Datos Dependiente"], ["Datos del Dependiente", "Contacto y ubicación"], ["Datos del Beneficiario", "Datos Beneficiario"], ["Datos del Beneficiario", "Contacto y ubicación"], ["Información del riesgo", "Información del riesgo"], ["Información del riesgo", "Bienes por asegurar"], ["Información del riesgo", "Coberturas Básicas"], ["Información del riesgo", "Coberturas Adicionales"], ["Declaraciones y Autorización", "Autorizaciones"], ["Declaraciones y Autorización", "Declaraciones Legales"]];
+const SEC_PAL=["FFEEF4FC","FFEEF8F1","FFFEF6EA","FFF5F0FC","FFFCF0F3","FFEDF7F8","FFF8F5EC","FFF1F2F9"];
+/* rutas: en la herramienta los arrays repetibles son «[]»; en la plantilla se ven como «[i]» */
+const tplPath=p=>String(p||"").replace(/\[\]/g,"[i]");
+const fromTplPath=p=>String(p||"").trim().replace(/\[i\]/gi,"[]");
+/* Sección/Subsección del machote más parecida a una sección propuesta desde el PDF */
+function f2MapMachote(){
+  const secs=[...new Set(MACHOTE12.map(r=>r[0]))].filter(t=>t!==SYS_SEC);
+  ST.S.slice().forEach(s=>{if(s.hidden)return;
+    let best=null;secs.forEach(t=>{const sc=fbSim(fbToks(s.title),fbToks(t));if(sc>=0.5&&(!best||sc>best.sc))best={t,sc}});
+    if(!best)return;
+    const other=ST.S.find(x=>x!==s&&x.title===best.t);
+    if(other){ST.Q.forEach(q=>{if(q.sid===s.id)q.sid=other.id});ST.S=ST.S.filter(x=>x!==s);s=other}else s.title=best.t;
+    const subs=MACHOTE12.filter(r=>r[0]===best.t).map(r=>r[1]);
+    ST.Q.filter(q=>q.sid===s.id&&!q.parentId&&!q.sub).forEach(q=>{let bs=null;subs.forEach(u=>{const sc=fbSim(fbToks(q.label),fbToks(u));if(sc>=0.5&&(!bs||sc>bs.sc))bs={u,sc}});q.sub=bs?bs.u:subs[0]});
+  });
 }
 function f2Infer(){
   let n=0;
-  if(!ST.Q.length){ST.S=fbRefSecs();ST.activeS=null}
   if(rn.rows.length)n+=f2ProposeFromPdf();
   const key=q=>q.boxes.length?Math.min(...q.boxes):1e6;
   ST.Q.sort((a,b)=>key(a)-key(b));
+  f2MapMachote();
   if(ST.paths.length){
     const owned=new Set(ST.Q.map(q=>q.json).filter(Boolean));
     ST.paths.forEach(p=>{if(owned.has(p.path))return;
@@ -1619,86 +1628,101 @@ function f2Infer(){
   }
   const has=s=>ST.Q.some(q=>q.sid===s.id);
   const firstIdx=s=>{const i=ST.Q.findIndex(q=>q.sid===s.id);return i<0?1e9:i};
-  ST.S=ST.S.filter(s=>has(s)||s._ref);
+  ST.S=ST.S.filter(has);
   ST.S.sort((a,b)=>((b.hidden?1:0)-(a.hidden?1:0))||firstIdx(a)-firstIdx(b));
-  ST.S.forEach(s=>delete s._ref);
   if(!ST.S.length)f2ActiveSid();
   fbNorm();
+  /* subsecciones en el orden del machote */
+  const mi=(s,u)=>{const i=MACHOTE12.findIndex(r=>r[0]===s.title&&r[1]===u.title);return i<0?1e9:i};
+  ST.S.forEach(s=>{const o=s.subs.slice();s.subs.sort((a,b)=>(mi(s,a)-mi(s,b))||(o.indexOf(a)-o.indexOf(b)))});
   return n;
 }
 async function f2TplDownload(){
   const m=$("#f2-msg");if(!window.ExcelJS){m.textContent="No se pudo cargar el generador de Excel. Recargá la página.";return}
   let inferred=0;if(!ST.Q.length)inferred=f2Infer();
   fbFillSubs();
-  const NAVY="FF1F3A5F",GREEN="FF2E7D32",LINE="FFD0D5DD",WHITE="FFFFFFFF";
+  const NAVY="FF1F3A5F",GREEN="FF2E7D32",PURPLE="FF6941C6",LINE="FFD0D5DD",WHITE="FFFFFFFF";
   const F=a=>({type:"pattern",pattern:"solid",fgColor:{argb:a}});
   const thin={style:"thin",color:{argb:LINE}};const BOX={top:thin,left:thin,bottom:thin,right:thin};
   const AR=o=>Object.assign({name:"Arial",size:10},o||{});
   const wb=new ExcelJS.Workbook();wb.creator="Ficha de formulario";wb.calcProperties.fullCalcOnLoad=true;
   const help=(ws,lines)=>{lines.forEach((t,i)=>{if(t==null)return;const c=ws.getCell(i+1,1);c.value=t;c.font=i===0?AR({size:14,bold:true,color:{argb:NAVY}}):AR({size:9,italic:true,color:{argb:"FF555555"}})});ws.getRow(1).height=17.35};
-  const header=(ws,cols)=>{cols.forEach(([h,w,fill],k)=>{const col=ws.getColumn(k+1);col.width=w;const c=ws.getCell(5,k+1);c.value=h;if(fill===null)return;c.font=AR({size:11,bold:true,color:{argb:WHITE}});c.fill=F(fill||NAVY);c.alignment={vertical:"middle",wrapText:true};c.border=BOX});ws.getRow(5).height=31.5};
-  const body=(ws,r,n)=>{for(let k=1;k<=n;k++){const c=ws.getCell(r,k);c.font=AR();c.alignment={vertical:"top",wrapText:true};c.border=BOX}};
-  const dv=(ws,ref,f)=>ws.dataValidations.add(ref,{type:"list",allowBlank:true,formulae:[f]});
+  const header=(ws,row,cols)=>{cols.forEach(([h,w,fill],k)=>{ws.getColumn(k+1).width=w;const c=ws.getCell(row,k+1);c.value=h;if(fill===null)return;c.font=AR({size:11,bold:true,color:{argb:WHITE}});c.fill=F(fill||NAVY);c.alignment={vertical:"middle",wrapText:true};c.border=BOX});ws.getRow(row).height=31.5};
+  const cell=(c,o)=>{c.font=AR(o);c.alignment={vertical:"top",wrapText:true};c.border=BOX};
+  const dv=(ws,ref,f)=>ws.dataValidations.add(ref,{type:"list",allowBlank:true,showErrorMessage:false,formulae:[f]});
   const cf=(ws,ref,formula,style)=>ws.addConditionalFormatting({ref,rules:[{type:"expression",formulae:[formula],style}]});
-  const GRAY={fill:{type:"pattern",pattern:"solid",bgColor:{argb:"FFF2F4F7"}},font:{color:{argb:"FF475467"}}};
-  const BAND={fill:{type:"pattern",pattern:"solid",bgColor:{argb:"FFEEF4FB"}}};
-  const DIM={font:{color:{argb:"FFB0B7C3"}}};
-  const LINE_SEC={border:{top:{style:"medium",color:{argb:NAVY}}}};
-  const LINE_SUB={border:{top:{style:"thin",color:{argb:"FF7A9CC6"}}}};
-  /* Hoja Secciones */
-  const wS=wb.addWorksheet("Secciones",{views:[{state:"frozen",xSplit:0,ySplit:5,topLeftCell:"A6"}]});
-  help(wS,SEC_HELP);
-  header(wS,[["Sección",34],["Subsección",34],["Oculta",9],["Se repite hasta",12,GREEN],["Se muestra si",40],["¿Va?",8],["Notas",36],["grupo",13,null]]);
-  const sRows=[];
-  ST.S.forEach(s=>s.subs.forEach((u,i)=>{const first=i===0;
-    sRows.push([s.title,u.title,(s.hidden||(!first&&u.hidden))?"Sí":"No",+u.rep>0?String(u.rep):"",first?(condPlainC(s.cond,s.condTxt)||condPlainC(u.cond,u.condTxt)):condPlainC(u.cond,u.condTxt),"Sí",first?(s.notes||u.notes||""):(u.notes||"")])}));
-  const sEnd=Math.max(66,5+sRows.length+40);let g=0;
-  for(let r=6;r<=sEnd;r++){body(wS,r,7);const v=sRows[r-6];if(v)v.forEach((x,k)=>{if(x!=="")wS.getCell(r,k+1).value=x});
-    const a=v?v[0]:"",pa=r>6&&sRows[r-7]?sRows[r-7][0]:"";g=r===6?1:(a===pa?g:g+1);
-    wS.getCell(r,8).value=r===6?{formula:"1",result:1}:{formula:`IF($A${r}=$A${r-1},H${r-1},H${r-1}+1)`,result:g}}
-  wS.getColumn(8).hidden=true;
-  dv(wS,`C6:C${sEnd}`,'"Sí,No"');dv(wS,`D6:D${sEnd}`,'"2,3,4,5,6,8,10"');dv(wS,`F6:F${sEnd}`,'"Sí,No"');
-  cf(wS,`A6:G${sEnd}`,'$C6="Sí"',GRAY);
-  cf(wS,`A6:G${sEnd}`,'AND($A6<>"",MOD($H6,2)=1)',BAND);
-  cf(wS,`A7:A${sEnd}`,'AND($A7<>"",$A7=$A6)',DIM);
-  cf(wS,`A7:G${sEnd}`,'AND($A7<>"",$A7<>$A6)',LINE_SEC);
+  /* datos */
+  const asked=fbOrdered().filter(q=>!fbParts(q).length);
+  const jRows=ST.paths.map(p=>[tplPath(p.path),typeof p.ex==="string"?p.ex:JSON.stringify(p.ex)]);
+  const jMap=new Map(jRows.map(r=>[r[0],r[1]]));
+  const pRows=asked.map(q=>{const r=fbRoot(q);const[pre,ed]=tplPre(q);const oc=tplType(q)==="Dato oculto";
+    return[secTitle(r.sid),fbRootSub(q),q.label,tplType(q),q.opts.map(o=>o.label+(o.code?"="+o.code:"")).join("; "),oc?"":(q.req?"Sí":"No"),oc?"Sí":pre,oc?"No":ed,condPlain(q),tplPath(q.json||""),q.split||(q.type==="Fecha"&&q.boxes.length===3?"día / mes / año":""),tplRule(q),"Sí",q.notes||"","Q"+q.id]});
+  const pEnd=5+pRows.length+300,jEnd=4+Math.max(1,jRows.length);
+  /* Listas: machote + secciones/subsecciones del proyecto (las de una misma sección, juntas) */
+  const lst=[];const addL=(a,b)=>{if(!lst.some(x=>x[0]===a&&x[1]===b))lst.push([a,b])};
+  const mSecs=[...new Set(MACHOTE12.map(r=>r[0]))];
+  mSecs.forEach(t=>{MACHOTE12.filter(r=>r[0]===t).forEach(r=>addL(r[0],r[1]));const s=ST.S.find(x=>x.title===t);if(s)s.subs.forEach(u=>addL(t,u.title))});
+  ST.S.forEach(s=>{if(!mSecs.includes(s.title))s.subs.forEach(u=>addL(s.title,u.title))});
+  const uniq=[...new Set(lst.map(x=>x[0]))];const lEnd=1+lst.length,dEnd=1+uniq.length;
   /* Hoja Preguntas */
   const wP=wb.addWorksheet("Preguntas",{views:[{state:"frozen",xSplit:3,ySplit:5,topLeftCell:"D6"}]});
-  help(wP,PRE_HELP);
-  header(wP,[["Sección",28],["Subsección",28],["Pregunta",36],["Tipo",22],["Opciones",32],["Obligatoria",11],["Viene prellenado",12],["Se puede editar",11],["Se muestra si",30],["En el PDF va partido en",22,GREEN],["Reglas / formato",24],["Ejemplo",22],["¿Va?",8],["Notas",32],["grupo",13,null],["ID (no tocar)",13,"FF98A2B3"]]);
-  const asked=fbOrdered().filter(q=>!fbParts(q).length);
-  const pRows=asked.map(q=>{const r=fbRoot(q);const[pre,ed]=tplPre(q);const oc=tplType(q)==="Dato oculto";
-    return[secTitle(r.sid),fbRootSub(q),q.label,tplType(q),q.opts.map(o=>o.label+(o.code?"="+o.code:"")).join("; "),oc?"":(q.req?"Sí":"No"),oc?"Sí":pre,oc?"No":ed,condPlain(q),q.split||(q.type==="Fecha"&&q.boxes.length===3?"día / mes / año":""),tplRule(q),q.ex||"","Sí",q.notes||"","Q"+q.id]});
-  const pEnd=5+pRows.length+300;g=0;
-  for(let r=6;r<=pEnd;r++){body(wP,r,14);const v=pRows[r-6];
-    if(v)v.slice(0,14).forEach((x,k)=>{if(x!=="")wP.getCell(r,k+1).value=x});
+  help(wP,PRE_HELP12);
+  header(wP,5,[["Sección",24],["Subsección",24],["Pregunta",36],["Tipo",22],["Opciones",30],["Obligatoria",11],["Viene prellenado",12],["Se puede editar",11],["Se muestra si",30],["Ruta JSON",46,PURPLE],["Valor en el JSON",24,PURPLE],["En el PDF va partido en",20,GREEN],["Reglas / formato",22],["¿Va?",8],["Notas",30],["ID (no tocar)",10,"FF98A2B3"],["grupo",13,null],["seccion",13,null]]);
+  let g=0;const secIdx=[];
+  for(let r=6;r<=pEnd;r++){const v=pRows[r-6];
+    for(let k=1;k<=16;k++)cell(wP.getCell(r,k),k===11?{color:{argb:PURPLE}}:{});
+    if(v){[...v.slice(0,10),null,...v.slice(10)].forEach((x,k)=>{if(x!==""&&x!=null)wP.getCell(r,k+1).value=x})}
+    const jv=v&&v[9]?(jMap.has(v[9])?jMap.get(v[9]):"no está en el JSON"):"";
+    wP.getCell(r,11).value={formula:`IF(J${r}="","",IFERROR(INDEX('JSON del cliente'!$B$5:$B$${jEnd},MATCH(J${r},'JSON del cliente'!$A$5:$A$${jEnd},0)),"no está en el JSON"))`,result:jv};
     const pv=r>6?pRows[r-7]:null;const ab=v?v[0]+"|"+v[1]:"|",pab=pv?pv[0]+"|"+pv[1]:"|";g=r===6?1:ab===pab?g:g+1;
-    wP.getCell(r,15).value=r===6?{formula:"1",result:1}:{formula:`IF(AND($A${r}=$A${r-1},$B${r}=$B${r-1}),O${r-1},O${r-1}+1)`,result:g};
-    const id=wP.getCell(r,16);id.font=AR({size:9,color:{argb:"FF667085"}});id.fill=F("FFF2F4F7");id.border=BOX;id.alignment={vertical:"top"};if(v)id.value=v[14]}
-  wP.getColumn(15).hidden=true;
-  dv(wP,`A6:A${pEnd}`,`Secciones!$A$6:$A$${sEnd}`);
-  dv(wP,`B6:B${pEnd}`,`OFFSET(Secciones!$B$6,MATCH($A6,Secciones!$A$6:$A$${sEnd},0)-1,0,COUNTIF(Secciones!$A$6:$A$${sEnd},$A6),1)`);
+    wP.getCell(r,17).value=r===6?{formula:"1",result:1}:{formula:`IF(AND($A${r}=$A${r-1},$B${r}=$B${r-1}),Q${r-1},Q${r-1}+1)`,result:g};
+    let si="";if(v&&v[0]){let k=secIdx.indexOf(v[0]);if(k<0){secIdx.push(v[0]);k=secIdx.length-1}si=k+1}
+    wP.getCell(r,18).value={formula:`IF($A${r}="","",IFERROR(INDEX(R$5:R${r-1},MATCH($A${r},$A$5:$A${r-1},0)),MAX(R$5:R${r-1})+1))`,result:si}}
+  wP.getColumn(17).hidden=true;wP.getColumn(18).hidden=true;
+  dv(wP,`A6:A${pEnd}`,`Listas!$D$2:$D$${dEnd}`);
+  dv(wP,`B6:B${pEnd}`,`OFFSET(Listas!$B$2,MATCH($A6,Listas!$A$2:$A$${lEnd},0)-1,0,COUNTIF(Listas!$A$2:$A$${lEnd},$A6),1)`);
   dv(wP,`D6:D${pEnd}`,`"${TPL_TIPOS.join(",")}"`);
-  ["F","G","H","M"].forEach(c=>dv(wP,`${c}6:${c}${pEnd}`,'"Sí,No"'));
-  cf(wP,`A6:N${pEnd}`,'$D6="Dato oculto"',GRAY);
-  cf(wP,`A6:N${pEnd}`,'AND($B6<>"",MOD($O6,2)=1)',BAND);
-  cf(wP,`A7:N${pEnd}`,'AND($B7<>"",$A7=$A6,$B7<>$B6)',LINE_SUB);
-  cf(wP,`A7:N${pEnd}`,'AND($A7<>"",$A7<>$A6)',LINE_SEC);
-  cf(wP,`A7:A${pEnd}`,'AND($A7<>"",$A7=$A6)',DIM);
-  cf(wP,`B7:B${pEnd}`,'AND($B7<>"",$A7=$A6,$B7=$B6)',DIM);
-  wP.autoFilter=`A5:N${pEnd}`;
-  /* Hoja Equivalencias (estática) */
-  const wE=wb.addWorksheet("Equivalencias con su ficha");
-  [36,42,56].forEach((w,k)=>wE.getColumn(k+1).width=w);
-  EQUIV.forEach((row,i)=>{row.forEach((x,k)=>{const c=wE.getCell(i+1,k+1);if(x!=="")c.value=x;c.border=BOX;
+  ["F","G","H","N"].forEach(c=>dv(wP,`${c}6:${c}${pEnd}`,'"Sí,No"'));
+  dv(wP,`J6:J${pEnd}`,`'JSON del cliente'!$A$5:$A$${jEnd}`);
+  const R=`A6:P${pEnd}`,R7=`A7:P${pEnd}`;
+  /* el gris de los ocultos va primero: en Excel la regla de mayor prioridad gana el relleno */
+  cf(wP,R,'$D6="Dato oculto"',{fill:{type:"pattern",pattern:"solid",bgColor:{argb:"FFF2F4F7"}},font:{color:{argb:"FF475467"}}});
+  SEC_PAL.forEach((c,i)=>cf(wP,R,`AND($A6<>"",MOD($R6-1,8)=${i})`,{fill:{type:"pattern",pattern:"solid",bgColor:{argb:c}}}));
+  cf(wP,`K6:K${pEnd}`,'K6="no está en el JSON"',{font:{color:{argb:"FFB42318"}}});
+  cf(wP,`A7:A${pEnd}`,'AND($A7<>"",$A7=$A6)',{font:{color:{argb:"FFB0B7C3"}}});
+  cf(wP,`B7:B${pEnd}`,'AND($B7<>"",$A7=$A6,$B7=$B6)',{font:{color:{argb:"FFB0B7C3"}}});
+  cf(wP,R7,'AND($A7<>"",$A7<>$A6)',{border:{top:{style:"medium",color:{argb:NAVY}}}});
+  cf(wP,R7,'AND($B7<>"",$A7=$A6,$B7<>$B6)',{border:{top:{style:"thin",color:{argb:"FF7A9CC6"}}}});
+  wP.autoFilter=`A5:P${pEnd}`;
+  /* Hoja JSON del cliente */
+  const wJ=wb.addWorksheet("JSON del cliente",{views:[{state:"frozen",xSplit:0,ySplit:4,topLeftCell:"A5"}]});
+  help(wJ,JSON_HELP12);
+  header(wJ,4,[["Ruta JSON",62,PURPLE],["Valor de ejemplo",40,PURPLE],["¿Se usa?",10]]);
+  const usedP=new Set(pRows.map(v=>v[9]).filter(Boolean));
+  jRows.forEach((v,i)=>{const r=5+i;cell(wJ.getCell(r,1));cell(wJ.getCell(r,2));wJ.getCell(r,1).value=v[0];wJ.getCell(r,2).value=v[1];
+    const c=wJ.getCell(r,3);c.font=AR();c.border=BOX;c.value={formula:`IF(COUNTIF(Preguntas!$J$6:$J$${pEnd},A${r})>0,"Sí","No")`,result:usedP.has(v[0])?"Sí":"No"}});
+  if(!jRows.length){wJ.getCell("A5").value="No se cargó un JSON del cliente.";wJ.getCell("A5").font=AR({italic:true,color:{argb:"FF555555"}})}
+  cf(wJ,`C5:C${jEnd}`,'C5="Sí"',{fill:{type:"pattern",pattern:"solid",bgColor:{argb:"FFDCFAE6"}},font:{color:{argb:"FF067647"}}});
+  cf(wJ,`C5:C${jEnd}`,'C5="No"',{fill:{type:"pattern",pattern:"solid",bgColor:{argb:"FFFEF0C7"}},font:{color:{argb:"FFB54708"}}});
+  wJ.autoFilter=`A4:C${jEnd}`;
+  /* Hoja Cómo se completa (fija) */
+  const wC=wb.addWorksheet("Cómo se completa");
+  [26,70,36].forEach((w,k)=>wC.getColumn(k+1).width=w);
+  COMO12.forEach((row,i)=>{row.forEach((x,k)=>{const c=wC.getCell(i+1,k+1);if(x!=="")c.value=x;c.border=BOX;
     if(i===0){c.font=AR({size:11,bold:true,color:{argb:WHITE}});c.fill=F(NAVY);c.alignment={vertical:"middle",wrapText:true}}
-    else{c.font=AR(k===0?{bold:true}:{});c.alignment={vertical:"top",wrapText:true}}});wE.getRow(i+1).height=EQUIV_H[i]});
+    else cell(c,k===0?{bold:true}:{})});wC.getRow(i+1).height=COMO12_H[i]});
+  /* Hoja Listas (oculta) */
+  const wL=wb.addWorksheet("Listas",{state:"hidden"});
+  wL.getCell("A1").value="Sección";wL.getCell("B1").value="Subsección";wL.getCell("D1").value="Secciones (únicas)";
+  lst.forEach((x,i)=>{wL.getCell(i+2,1).value=x[0];wL.getCell(i+2,2).value=x[1]});
+  uniq.forEach((x,i)=>wL.getCell(i+2,4).value=x);
   const buf=await wb.xlsx.writeBuffer();
   await rnSave(rnBase()+"_plantilla_preguntas.xlsx",new Uint8Array(buf));
   fbAll();
   m.textContent=(inferred?`Se infirieron ${inferred} preguntas y datos ocultos desde el PDF y el JSON, y van en la plantilla para que el cliente los revise. `:"")+(/^Listo/.test($("#rn-msg").textContent)?"Plantilla descargada. Cuando vuelva completada, subila con «Subir plantilla».":$("#rn-msg").textContent);
 }
-async function f2TplUpload(file){
+/* Lector del formato v2 (hojas «Secciones» / «Preguntas» / «Equivalencias») */
+async function f2TplUploadV2(file){
   const m=$("#f2-msg");if(!window.ExcelJS){m.textContent="No se pudo cargar el lector de Excel. Recargá la página.";return}
   let wb;try{wb=new ExcelJS.Workbook();await wb.xlsx.load(await file.arrayBuffer())}catch(e){m.textContent="No se pudo leer ese archivo. ¿Es la plantilla en .xlsx?";return}
   const byName=re=>wb.worksheets.find(w=>re.test(fbSlug(w.name)));
@@ -1779,6 +1803,73 @@ async function f2TplUpload(file){
   fbAll();
 }
 
+/* Subir plantilla: detecta el formato (v12 / v2 con hoja Secciones / formato anterior) */
+async function f2TplUpload(file){
+  const m=$("#f2-msg");if(!window.ExcelJS){m.textContent="No se pudo cargar el lector de Excel. Recargá la página.";return}
+  let wb;try{wb=new ExcelJS.Workbook();await wb.xlsx.load(await file.arrayBuffer())}catch(e){m.textContent="No se pudo leer ese archivo. ¿Es la plantilla en .xlsx?";return}
+  const txt=v=>{if(v==null)return"";if(typeof v==="object"){if(v.richText)return v.richText.map(x=>x.text).join("").trim();if(v.text)return String(v.text).trim();if("result" in v)return v.result==null?"":String(v.result).trim();if(v instanceof Date)return v.toISOString().slice(0,10);return""}return String(v).trim()};
+  const wsP=wb.worksheets.find(w=>fbSlug(w.name)==="preguntas");
+  let hr=0,hdr=[];
+  if(wsP)for(let r=1;r<=12&&!hr;r++){const h=[];wsP.getRow(r).eachCell({includeEmpty:true},(c,i)=>h[i]=fbSlug(txt(c.value)));if(h.includes("pregunta")&&h.includes("ruta_json")){hr=r;hdr=h}}
+  if(!hr)return f2TplUploadV2(file);
+  /* encabezados: solo la primera columna con cada nombre («seccion» oculta repite el de «Sección») */
+  const col={};hdr.forEach((h,i)=>{if(h&&!(h in col))col[h]=i});
+  const PR=[];wsP.eachRow((row,r)=>{if(r<=hr)return;const o={_r:r};Object.entries(col).forEach(([h,i])=>{if(h!=="grupo"&&h!=="valor_en_el_json")o[h]=txt(row.getCell(i).value)});if(o.pregunta)PR.push(o)});
+  if(!PR.length){m.textContent="La plantilla está vacía.";return}
+  const K=fbSlug;let nNew=0,nUpd=0,nDel=0,nRev=0;const badPath=[];
+  const delQ=q=>{if(!q||!ST.Q.includes(q))return;ST.Q=ST.Q.filter(x=>x!==q&&x.parentId!==q.id);nDel++};
+  /* secciones y subsecciones en orden de primera aparición; «Datos del sistema (oculto)» siempre primera */
+  const S2=[];const order=new Map();
+  const secFor=t=>{const k=K(t);let s=S2.find(x=>K(x.title)===k);
+    if(!s){s=ST.S.find(x=>K(x.title)===k)||{id:ST.nid++,title:t,hidden:false,cond:null,condTxt:"",notes:"",subs:[]};s.title=t;s.subs=s.subs||[];if(k===K(SYS_SEC))s.hidden=true;S2.push(s);order.set(s,[])}
+    return s};
+  const subFor=(s,t)=>{let u=s.subs.find(x=>K(x.title)===K(t));if(!u){u=fbNewSub(t);s.subs.push(u)}const o=order.get(s);if(!o.includes(u))o.push(u);return u};
+  const seen=new Set();const placed=[];let lastS="",lastU="";
+  PR.forEach(r=>{
+    const idm=/^Q(\d+)$/i.exec(r.id_no_tocar||"");let q=idm?fbQ(+idm[1]):null;if(q&&seen.has(q.id))q=null;
+    if(r.va&&!yes(r.va)){if(q)delQ(q);return}
+    const st=r.seccion||lastS||"Sección 1";const s=secFor(st);
+    const ut=r.subseccion||(r.seccion&&K(r.seccion)!==K(lastS)?"":lastU)||(s.subs[0]&&s.subs[0].title)||s.title;
+    lastS=st;lastU=ut;const u=subFor(s,ut);
+    if(q)nUpd++;else{q=fbNewQ(r.pregunta,s.id);nNew++}
+    seen.add(q.id);q.sid=s.id;q.label=r.pregunta;
+    if(q.parentId){const par=fbQ(q.parentId);if(par){par.sid=s.id;par.sub=u.title}}else q.sub=u.title;
+    fromTplType(r.tipo,q,!!(s.hidden||u.hidden));
+    if(r.opciones)q.opts=parseOpts(r.opciones,q.opts);else if(!/opción|Sí \/ No/.test(q.type))q.opts=[];
+    if(r.obligatoria)q.req=yes(r.obligatoria);
+    fromTplPre(r.viene_prellenado,r.se_puede_editar,q);
+    const rp=fromTplPath(r.ruta_json);
+    if(rp!==(q.json||"")){q.json=rp||null;q.jsonOk=!!rp}
+    if(rp&&!q.parentId&&!q._subRep)q.repeat=rp.includes("[]");
+    if(rp&&ST.paths.length&&!ST.paths.some(p=>p.path===rp))badPath.push(r.ruta_json);
+    if((q.split||"")!==(r.en_el_pdf_va_partido_en||"")){q.split=r.en_el_pdf_va_partido_en||"";delete q.roles}
+    q.rule=r.reglas_formato||"";q.notes=r.notas||"";
+    if(r.tipo==="Dato oculto"){q.hiddenSrc=OCULTO_ORIG.find(o=>K(q.rule).startsWith(K(o)))||q.hiddenSrc||"Viene del sistema";if(!/Sistema|calcula/.test(q.origin||""))q.origin=q.hiddenSrc==="Se calcula"?"Se calcula":"Sistema (no se ve)"}
+    q._cond=r.se_muestra_si||"";placed.push({q,r:r._r});
+  });
+  /* subsecciones: primero las de la hoja (en orden de aparición), después las que ya existían */
+  S2.forEach(s=>{const o=order.get(s);s.subs=[...o,...s.subs.filter(u=>!o.includes(u))]});
+  S2.sort((a,b)=>(K(b.title)===K(SYS_SEC))-(K(a.title)===K(SYS_SEC)));
+  const rest=ST.Q.filter(q=>!seen.has(q.id));
+  rest.forEach(q=>{if(q.parentId)return;const s=ST.S.find(x=>x.id===q.sid);if(s&&!S2.includes(s))S2.push(s)});
+  ST.S=S2;
+  placed.forEach(({q})=>{const t=q._cond;delete q._cond;if(!t){q.cond=null;q.condTxt="";return}const c=parseCond(t,q);if(c){q.cond=c;q.condTxt=""}else{q.cond=null;q.condTxt=t;nRev++}});
+  /* orden: sección → subsección → fila (aunque la fila esté al final de la hoja) */
+  fbNorm();
+  const si=new Map(ST.S.map((s,i)=>[s.id,i]));
+  const ui=q=>{const r=fbRoot(q);const s=ST.S.find(x=>x.id===r.sid);return s?s.subs.findIndex(u=>u.title===(r.sub||"")):-1};
+  placed.sort((a,b)=>(si.get(fbRoot(a.q).sid)-si.get(fbRoot(b.q).sid))||(ui(a.q)-ui(b.q))||(a.r-b.r));
+  const out=[];const done=new Set();
+  const put=q=>{if(done.has(q.id))return;const par=q.parentId?fbQ(q.parentId):null;if(par&&!done.has(par.id)){done.add(par.id);out.push(par)}done.add(q.id);out.push(q)};
+  placed.forEach(x=>put(x.q));
+  ST.Q=[...out,...ST.Q.filter(q=>!done.has(q.id))].filter(q=>!q.parentId||fbQ(q.parentId));
+  if(!ST.S.length)f2ActiveSid();
+  fbNorm();ST.Q.forEach(f2AutoJson);ST.selQ=null;ST.open=null;
+  const keep=rest.filter(q=>!q.parentId&&ST.Q.includes(q)).length;
+  m.textContent=`Plantilla cargada: ${nUpd} actualizadas, ${nNew} nuevas, ${nDel} eliminadas, ${nRev} a revisar. Las que ya estaban conectadas al PDF o al JSON conservan sus conexiones.${nRev?" Las condiciones «Se muestra si» que no se pudieron leer quedaron marcadas «(revisar)».":""}${badPath.length?` Atención: ${badPath.length} ${badPath.length===1?"ruta no está":"rutas no están"} en el JSON cargado (${badPath.slice(0,3).join(", ")}${badPath.length>3?"…":""}).`:""}${keep?` ${keep} preguntas que no estaban en la plantilla quedaron al final de su sección.`:""}`;
+  fbAll();
+}
+
 $("#f2-tpl-dl").addEventListener("click",f2TplDownload);
 $("#f2-tpl-in").addEventListener("change",async e=>{const f=e.target.files[0];if(f)await f2TplUpload(f);e.target.value=""});
 $("#f2-xlsx").addEventListener("click",()=>f2Excel($("#f2-msg")));
@@ -1790,17 +1881,17 @@ const tpBoxSorted=q=>[...q.boxes].sort((a,b)=>a-b);
 function tpGet(o,path){
   if(!o)return undefined;
   const i=path.indexOf("[]");
-  const get=(x,p)=>p.split(".").filter(Boolean).reduce((a,k)=>a==null?undefined:a[k],x);
+  const get=(x,p)=>p.replace(/\[(\d+)\]/g,".$1").split(".").filter(Boolean).reduce((a,k)=>a==null?undefined:a[k],x);
   if(i<0)return get(o,path);
   const arr=get(o,path.slice(0,i));const rest=path.slice(i+2).replace(/^\./,"");
   return Array.isArray(arr)?arr.map(el=>rest?get(el,rest):el):undefined;
 }
 function tpSet(o,path,val,k){
   const i=path.indexOf("[]");
-  const set=(x,p,v)=>{const ks=p.split(".").filter(Boolean);let c=x;ks.slice(0,-1).forEach(kk=>{if(typeof c[kk]!=="object"||c[kk]===null)c[kk]={};c=c[kk]});c[ks[ks.length-1]]=v};
+  const set=(x,p,v)=>{const ks=p.replace(/\[(\d+)\]/g,".$1").split(".").filter(Boolean);let c=x;ks.slice(0,-1).forEach((kk,j)=>{if(typeof c[kk]!=="object"||c[kk]===null)c[kk]=/^\d+$/.test(ks[j+1])?[]:{};c=c[kk]});c[ks[ks.length-1]]=v};
   if(i<0){set(o,path,val);return}
   const pre=path.slice(0,i),rest=path.slice(i+2).replace(/^\./,"");
-  const ks=pre.split(".").filter(Boolean);let c=o;ks.slice(0,-1).forEach(kk=>{if(typeof c[kk]!=="object"||c[kk]===null)c[kk]={};c=c[kk]});
+  const ks=pre.replace(/\[(\d+)\]/g,".$1").split(".").filter(Boolean);let c=o;ks.slice(0,-1).forEach((kk,j)=>{if(typeof c[kk]!=="object"||c[kk]===null)c[kk]=/^\d+$/.test(ks[j+1])?[]:{};c=c[kk]});
   const last=ks[ks.length-1];if(!Array.isArray(c[last]))c[last]=[];while(c[last].length<=k)c[last].push({});
   if(rest)set(c[last][k],rest,val);else c[last][k]=val;
 }
