@@ -376,7 +376,7 @@ button.btn.on{border-color:#7b3fe4;color:#7b3fe4;background:rgba(123,63,228,.08)
   <div class="rn-tools">
     <button class="btn" id="rn-okall">Aceptar todos los de confianza alta</button>
     <label class="rn-keys" for="rn-from">Cambiar prefijo</label><input id="rn-from" placeholder="cliente_"><span class="rn-keys">por</span><input id="rn-to" placeholder="tomador_"><button class="btn" id="rn-pref">Aplicar</button>
-    <select id="rn-filter" class="btn" aria-label="Filtrar lista" style="padding:7px 10px"><option value="all">Ver todos</option><option value="todo">Ver pendientes</option><option value="err">Ver con error</option></select>
+    <select id="rn-filter" class="btn" aria-label="Filtrar lista" style="padding:7px 10px"><option value="all">Ver todos</option><option value="todo">Ver pendientes</option><option value="ok">Ver aceptados</option><option value="err">Ver con error</option></select>
     <span style="flex:1"></span>
     <button class="btn" id="rn-csv">Bajar lista (.csv)</button>
     <button class="btn pri" id="rn-dl">Bajar PDF renombrado</button>
@@ -735,7 +735,7 @@ async function rnRender(){
         const b=document.createElement("button");
         b.className="rn-box";b.dataset.i=r.i;
         b.style.left=Math.min(x0,x1)+"px";b.style.top=Math.min(y0,y1)+"px";b.style.width=Math.abs(x1-x0)+"px";b.style.height=Math.abs(y1-y0)+"px";
-        b.addEventListener("click",e=>{if(rn.dragged)return;if(rn.multiMode||e.shiftKey||e.ctrlKey||e.metaKey){rnToggle(r.i)}else{if(rn.multi.size)rnClearMulti();rnSelect(r.i,true,true)}});
+        b.addEventListener("click",e=>{if(rn.dragged)return;rnReveal(r.i);if(rn.multiMode||e.shiftKey||e.ctrlKey||e.metaKey){rnToggle(r.i)}else{if(rn.multi.size)rnClearMulti();rnSelect(r.i,true,true)}});
         wrap.appendChild(b);
       });
     });
@@ -752,7 +752,7 @@ function rnPaint(){
 function rnList(){
   const f=$("#rn-filter").value;
   rnValidate(rn.rows);
-  const vis=rn.rows.filter(r=>f==="all"||(f==="todo"&&!r.ok)||(f==="err"&&r.err));
+  const vis=rn.rows.filter(r=>f==="all"||(f==="todo"&&!r.ok)||(f==="ok"&&r.ok)||(f==="err"&&r.err));
   $("#rn-list").innerHTML=vis.length?vis.map(r=>`<div class="rn-row${r.ok?" ok":""}${r.i===rn.sel?" sel":""}${rn.multi.has(r.i)?" multi":""}" data-i="${r.i}" role="listitem">
     <input type="checkbox" class="ck" ${rn.multi.has(r.i)?"checked":""} aria-label="Elegir ${esc(r.old)}">
     <div class="st ${r.err?"err":r.conf}" title="${r.ok?"Aceptado":r.err?"Con error":"Sin aceptar · confianza "+r.conf}">${r.ok?"✓":""}</div>
@@ -771,6 +771,8 @@ function rnStats(){
   else{const pend=rn.rows.filter(r=>!r.ok);const cm={alta:0,media:0,baja:0};pend.forEach(r=>cm[r.conf]++);
     d.className="rn-done todo";d.innerHTML=`Faltan <b>${n-ok}</b> por aceptar: ${cm.alta} azules, ${cm.media} amarillos, ${cm.baja} rojos. <button class="btn" id="rn-gotodo">Ver solo los que faltan</button>`;$("#rn-gotodo").onclick=()=>{$("#rn-filter").value="todo";rnList()}}
 }
+/* si el filtro esconde ese casillero (p. ej. ya aceptado), mostrar todos para poder revisarlo */
+function rnReveal(i){if(document.querySelector(`.rn-row[data-i="${i}"]`))return;$("#rn-filter").value="all";rnList();$("#rn-msg").textContent="Se muestran todos los casilleros para que veas el que tocaste."}
 function rnSelect(i,scrollPdf,focus){
   rn.sel=i;
   document.querySelectorAll(".rn-row").forEach(el=>el.classList.toggle("sel",+el.dataset.i===i));
