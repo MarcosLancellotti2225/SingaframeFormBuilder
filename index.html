@@ -194,6 +194,12 @@ button.btn.on{border-color:#7b3fe4;color:#7b3fe4;background:rgba(123,63,228,.08)
 .pchip,.jchip{font:12px var(--mono);border-radius:4px;padding:1px 6px;background:var(--soft);color:var(--muted)}
 .pchip.none,.jchip.none{color:var(--muted);font-style:italic}
 .jchip.ok{background:var(--json-bg);color:var(--json)}
+.dchip{font:12px var(--sans);border-radius:4px;padding:1px 6px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.dchip.ok{background:var(--form-bg);color:var(--form)}
+.dchip.dif{background:var(--warn-bg);color:var(--warn)}
+.dchip.sug{background:var(--soft);color:var(--muted)}
+.tag.dic{background:var(--form-bg);color:var(--form)}
+.tag.dicx{background:var(--warn-bg);color:var(--warn)}
 .jchip.sug{background:rgba(240,170,20,.2);color:var(--pdf)}
 .mini{font:12px var(--sans);border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:5px;padding:2px 7px;cursor:pointer}
 .jp{display:block;width:100%;text-align:left;border:0;border-bottom:1px solid var(--line);background:none;padding:7px 10px;cursor:pointer;color:var(--ink);font:inherit}
@@ -962,13 +968,297 @@ function jsRead(){
   catch(e){m.textContent="No es un JSON válido: revisá comas, comillas y llaves.";m.style.color="var(--warn)";ST.paths=[];jsList()}
 }
 function jsList(){
-  $("#js-count").textContent=ST.paths.length?`${ST.paths.length} datos encontrados`:"";
-  $("#js-list").innerHTML=ST.paths.length?`<table class="jt"><thead><tr><th>Dato (ruta)</th><th>Valor de ejemplo</th></tr></thead><tbody>${ST.paths.map(p=>`<tr><td class="mono">${esc(p.path)}${p.arr?' <span class="tag">se repite</span>':""}</td><td>${esc(typeof p.ex==="string"?p.ex:JSON.stringify(p.ex))}</td></tr>`).join("")}</tbody></table>`:'<p class="msg" style="padding:12px">Todavía no hay datos. Pegá un JSON o usá el de ejemplo.</p>';
+  const dst=ST.paths.map(p=>dicPathSt(p.path));const nd=dst.filter(x=>x.st==="ok").length;
+  $("#js-count").textContent=ST.paths.length?`${ST.paths.length} datos encontrados${DIC.length?` · ${nd} coinciden con el Diccionario INS`:""}`:"";
+  $("#js-list").innerHTML=ST.paths.length?`<table class="jt"><thead><tr><th>Dato (ruta)</th><th>Valor de ejemplo</th>${DIC.length?"<th>Diccionario INS</th>":""}</tr></thead><tbody>${ST.paths.map((p,k)=>`<tr><td class="mono">${esc(tplPath(p.path))}${p.arr?' <span class="tag">se repite</span>':""}</td><td>${esc(typeof p.ex==="string"?p.ex:JSON.stringify(p.ex))}</td>${DIC.length?`<td>${dst[k].st==="ok"?`✓ ${esc(DIC[dst[k].i][0])}`:dst[k].st==="est"?`<span style="color:var(--warn)">≠ ${esc(DIC[dst[k].i][0])} (lista / objeto)</span>`:'<span style="color:var(--muted)">—</span>'}</td>`:""}</tr>`).join("")}</tbody></table>`:'<p class="msg" style="padding:12px">Todavía no hay datos. Pegá un JSON o usá el de ejemplo.</p>';
 }
 $("#js-in").addEventListener("input",()=>{clearTimeout(ST.jt);ST.jt=setTimeout(jsRead,350)});
 $("#js-file").addEventListener("change",async e=>{const f=e.target.files[0];if(!f)return;$("#js-in").value=await f.text();jsRead();e.target.value=""});
 $("#js-sample").addEventListener("click",()=>{$("#js-in").value=JS_SAMPLE;jsRead()});
 
+/* ── Diccionario General INS (tools/build_dic.mjs lo regenera desde docs/diccionario_v4.xlsx) ── */
+/*DIC:BEGIN*/
+/* Generado con tools/build_dic.mjs desde diccionario_v4.xlsx (184 campos). No editar a mano. */
+/* [nombre web, sinónimos y nombre en el PDF, paso, sección, ruta JSON, visible (1) u oculto (0)] */
+const DIC=[
+["Tipo de Formulario",["Código de formulario"],"Datos del sistema (oculto)","Encabezado","encabezado.codigoTipoFormulario",0],
+["Descripción Tipo Formulario",["Descripción del tipo de formulario","Nombre del formulario"],"Datos del sistema (oculto)","Encabezado","encabezado.descripcionTipoFormulario",0],
+["Tipo Trámite",["Tipo de trámite","Código de trámite"],"Datos del sistema (oculto)","Encabezado","encabezado.codigoTipoTramite",0],
+["Descripción Tipo Trámite",["Descripción del trámite","Nombre del trámite"],"Datos del sistema (oculto)","Encabezado","encabezado.descripcionTipoTramite",0],
+["Identificador Transacción Interno",["Identificador de transacción","Referencia INS"],"Datos del sistema (oculto)","Encabezado","encabezado.identificadorTransaccionInterno",0],
+["Correo electrónico",["Correo de envío","Email de envío"],"Datos del sistema (oculto)","Encabezado","encabezado.correoElectronico",0],
+["Código de Producto",["Producto","Código del producto"],"Datos del sistema (oculto)","Encabezado","encabezado.codigoProducto",0],
+["Descripción Producto",["Nombre del producto","Descripción del producto"],"Datos del sistema (oculto)","Encabezado","encabezado.descripcionProducto",0],
+["Nombre Completo Cliente",["Nombre del cliente","Cliente"],"Datos del sistema (oculto)","Encabezado","encabezado.nombreCompletoCliente",0],
+["Identificador Archivo",["ID Namirial","Identificador Namirial"],"Datos del sistema (oculto)","Encabezado","encabezado.identificadorArchivo",0],
+["Conozca a su cliente actualizado",["KYC actualizado","Conozca a su cliente"],"Datos del sistema (oculto)","Encabezado","encabezado.conozcaClienteActualizado",0],
+["Sede Administradora",["Código de sede","Sede"],"Datos del sistema (oculto)","Encabezado","encabezado.sedeAdministradora",0],
+["Descripción Sede Administradora",["Nombre de sede","Descripción de sede"],"Datos del sistema (oculto)","Encabezado","encabezado.descripcionSedeAdministradora",0],
+["Método de envío del formulario",["Medio de envío","Canal de envío"],"Datos del sistema (oculto)","Encabezado","encabezado.metodoEnvioFormulario",0],
+["Lugar",["Ciudad de emisión","Lugar de creación"],"Datos Generales","Información de la Solicitud","datosFormulario.datosGenerales.lugar",1],
+["Fecha",["Fecha de creación","Fecha: día/mes/año"],"Datos Generales","Información de la Solicitud","datosFormulario.datosGenerales.fechaCreacion",1],
+["Código Intermediario",["Código del asesor","Código"],"Información de Póliza","Datos del Asesor","datosFormulario.datosGenerales.intermediario.codigoIntermediario",1],
+["Identificación",["Identificación del intermediario","Identificación del asesor"],"Información de Póliza","Datos del Asesor","datosFormulario.datosGenerales.intermediario.identificacion",1],
+["Código tipo de identificación",["Tipo de identificación del intermediario"],"Información de Póliza","Datos del Asesor","datosFormulario.datosGenerales.intermediario.codigoTipoIdentificacion",1],
+["Nombre",["Nombre del intermediario","Nombre del asesor","Nombre completo intermediario"],"Información de Póliza","Datos del Asesor","datosFormulario.datosGenerales.intermediario.nombre",1],
+["Nombre",["Nombre del intermediario","Nombre del asesor","Nombre completo intermediario"],"Información de Póliza","Datos del Asesor","datosFormulario.datosGenerales.intermediario.nombreCompleto",1],
+["Correo electrónico",["Correo del intermediario","Correo del asesor"],"Información de Póliza","Datos del Asesor","datosFormulario.datosGenerales.intermediario.correoElectronico",1],
+["Número de Póliza Madre",["Número de póliza"],"Información de Póliza","Datos de la Póliza","datosFormulario.datosGenerales.polizaMadre.numeroPoliza",1],
+["Vigencia desde",["Inicio de vigencia","Fecha de inicio"],"Información de Póliza","Datos de la Póliza","datosFormulario.datosGenerales.polizaMadre.vigenciaDesde",1],
+["Vigencia hasta",["Fin de vigencia","Fecha de vencimiento"],"Información de Póliza","Datos de la Póliza","datosFormulario.datosGenerales.polizaMadre.vigenciaHasta",1],
+["Seleccione la moneda de la póliza",["Moneda","Moneda de la póliza","Moneda: Colones"],"Información de Póliza","Datos de la Póliza","datosFormulario.datosGenerales.polizaMadre.codigoMoneda",1],
+["Tipo de identificación",["Tipo de identificación del tomador","Tipo de identificación: Jurídica Nacional"],"Información de Póliza","Datos de la Póliza","datosFormulario.datosGenerales.polizaMadre.codigoTipoIdentificacionTomador",1],
+["Cédula jurídica",["Identificación del tomador","No Identificación"],"Información de Póliza","Datos de la Póliza","datosFormulario.datosGenerales.polizaMadre.identificacionTomador",1],
+["Nombre o razón social",["Tomador","Nombre del tomador","Razón social"],"Información de Póliza","Datos de la Póliza","datosFormulario.datosGenerales.polizaMadre.nombreTomador",1],
+["Seleccione la forma de pago",["Forma de Pago: Mensual"],"Información de Póliza","Datos de la Póliza","datosFormulario.datosGenerales.polizaMadre.codigoFormaPago",1],
+["Seleccione la forma de pago",["Forma de pago","Método de pago","Forma de Pago: Mensual"],"Información de Póliza","Datos de la Póliza","datosFormulario.datosGenerales.polizaMadre.descripcionFormaPago",0],
+["Tipo de identificación",["Descripción del tipo de identificación del tomador","Tipo de identificación: Jurídica Nacional"],"Información de Póliza","Datos de la Póliza","datosFormulario.datosGenerales.polizaMadre.descripcionTipoIdentificacionTomador",0],
+["¿Tiene otro seguro médico?",["¿Tiene otro seguro médico?","¿Esta solicitud va a sustituir otro seguro?"],"Información de Póliza","Información adicional","datosFormulario.datosGenerales.datosAdicionales.indicadorSubstituyeSeguro",1],
+["¿Qué tipo de seguro tiene actualmente?",["Seguro del INS","Tipo de seguro actual"],"Información de Póliza","Información adicional","datosFormulario.datosGenerales.datosAdicionales.indicadorSubstituyeSeguroINS",1],
+["Nombre de la aseguradora actual",["Nombre de la compañía","Nombre de la aseguradora actual"],"Información de Póliza","Información adicional","datosFormulario.datosGenerales.datosAdicionales.nombreAseguradoraSubstituye",1],
+["Número de póliza actual",["N.º de póliza","Número de póliza actual"],"Información de Póliza","Información adicional","datosFormulario.datosGenerales.datosAdicionales.numeroPolizaSubstituye",1],
+["Observaciones",["Observaciones","Comentarios"],"Información de Póliza","Información adicional","datosFormulario.datosGenerales.datosAdicionales.observaciones",1],
+["Tipo de Identificación Persona",["Tipo de indentificación","Tipo de Identificación"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Datos Persona","datosFormulario.personas[].codigoTipoIdentificacion",1],
+["Identificación de Persona",["No. de identificación","Número de Identificación"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Datos Persona","datosFormulario.personas[].numeroIdentificacion",1],
+["Correo electrónico",["Email","Correo electrónico de la persona"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Datos Persona","datosFormulario.personas[].correoElectronico",1],
+["Nombre Completo",["Nombre completo del asegurado","Nombre completo de la persona","Nombre completo"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Datos Persona","datosFormulario.personas[].nombreCompleto",1],
+["Primer Apellido",["Apellido 1"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Datos Persona","datosFormulario.personas[].primerApellido",1],
+["Segundo Apellido",["Apellido 2"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Datos Persona","datosFormulario.personas[].segundoApellido",1],
+["Primer Nombre",["Nombre 1"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Datos Persona","datosFormulario.personas[].primerNombre",1],
+["Segundo Nombre",["Nombre 2"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Datos Persona","datosFormulario.personas[].segundoNombre",1],
+["Fecha de Nacimiento",["Nacimiento","Fecha nacimiento"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Datos Persona","datosFormulario.personas[].fechaNacimiento",1],
+["Edad",["Edad calculada"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Datos Persona","datosFormulario.personas[].edad",1],
+["Estado civil",[],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Datos Persona","datosFormulario.personas[].codigoEstadoCivil",1],
+["Sexo",["Sexo","Género masculino/femenino","Género"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Datos Persona","datosFormulario.personas[].codigoGenero",1],
+["Teléfono",["Teléfono móvil","Celular"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Datos Persona","datosFormulario.personas[].telefonoMovil",1],
+["Tipo de Persona",["Código de tipo de persona","Asegurado","Tomador","Beneficiario","Dependiente"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Datos Persona","datosFormulario.personas[].codigoTipo",0],
+["Descripción Tipo de Persona",["Descripción de tipo de persona","Rol de persona"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Datos Persona","datosFormulario.personas[].descripcionTipo",0],
+["Descripción Tipo de Identificación de Persona",["Descripción del tipo de identificación"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Datos Persona","datosFormulario.personas[].descripcionTipoIdentificacion",0],
+["Descripción de estado civil",[],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Datos Persona","datosFormulario.personas[].descripcionEstadoCivil",0],
+["Descripción del género",["Descripción de género"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Datos Persona","datosFormulario.personas[].descripcionGenero",0],
+["País",["País de residencia"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Contacto y Ubicación","datosFormulario.personas[].direccion[].codigoPais",1],
+["Provincia",["Provincia de residencia"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Contacto y Ubicación","datosFormulario.personas[].direccion[].codigoProvincia",1],
+["Cantón",["Cantón de residencia"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Contacto y Ubicación","datosFormulario.personas[].direccion[].codigoCanton",1],
+["Distrito",["Distrito de residencia"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Contacto y Ubicación","datosFormulario.personas[].direccion[].codigoDistrito",1],
+["Dirección exacta",["Dirección del domicilio","Dirección exacta del domicilio actual"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Contacto y Ubicación","datosFormulario.personas[].direccion[].direccionExacta",1],
+["Descripción Provincia",["Descripción de provincia","Nombre de provincia"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Contacto y Ubicación","datosFormulario.personas[].direccion[].descripcionProvincia",0],
+["Descripción Cantón",["Descripción de cantón","Nombre de cantón"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Contacto y Ubicación","datosFormulario.personas[].direccion[].descripcionCanton",0],
+["Descripción Distrito",["Descripción de distrito","Nombre de distrito"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Contacto y Ubicación","datosFormulario.personas[].direccion[].descripcionDistrito",0],
+["Medio de notificación",["Canal de notificación","Medio por el cual desea ser notificado"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Preferencias de Notificación","datosFormulario.personas[].mediosNotificacion[].codigoMedioNotificacion",1],
+["Medio de notificación",["Nombre del medio","Descripción del medio"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Preferencias de Notificación","datosFormulario.personas[].mediosNotificacion[].medioNotificacion",1],
+["Datos de notificación",["Destino de notificación","Dato de notificación","Campos de texto para notificación"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Preferencias de Notificación","datosFormulario.personas[].mediosNotificacion[].datosNotificacion",1],
+["Medio de notificación",["Descripción del medio de notificación"],"Datos de la persona (Asegurado, Tomador, Beneficiario, Dependiente)","Preferencias de Notificación","datosFormulario.personas[].mediosNotificacion[].descripcion",0],
+["Nombre Completo Asegurado Directo",["Nombre completo del asegurado directo"],"Datos del Asegurado","Datos Persona","datosFormulario.personas[].nombreCompletoAseguradoDirecto",1],
+["¿Cuál es su ingreso mensual bruto?",["Ingreso bruto mensual","Ingreso mensual","Ingreso Mensual Bruto"],"Datos del Asegurado","Datos Persona","datosFormulario.personas[].ingresoMensualBruto",1],
+["¿Su residencia habitual y permanente será en Costa Rica?",["Residencia permanente en Costa Rica"],"Datos del Asegurado","Datos Persona","datosFormulario.personas[].residiraEnCostaRica",1],
+["¿Cuál es su profesión u ocupación?",["Profesión","Ocupación","Profesión u Ocupación:"],"Datos del Asegurado","Datos Persona","datosFormulario.personas[].profesionOcupacion",1],
+["¿Practica algún deporte o realiza alguna ocupación adicional?",["Actividad deportiva","Ocupación adicional","¿Practica algún deporte u ocupación adicional?"],"Datos del Asegurado","Datos Persona","datosFormulario.personas[].indicadorPracticaDeporteORealizaOcupacionAdicional",1],
+["Tipo y frecuencia de práctica",["Detalle del deporte","Frecuencia de práctica","Tipo y frencuencia de práctica:","Indique el tipo de deporte u ocupación adicional y la frecuencia con que lo practica"],"Datos del Asegurado","Datos Persona","datosFormulario.personas[].detalleDeporteOcupacionAdicional",1],
+["¿Cómo ha variado su peso en los últimos 6 meses?",["En los últimos 6 meses su peso ha"],"Datos del Asegurado","Datos Persona","datosFormulario.personas[].codigoVariacionPesoUltimosSeisMeses",1],
+["¿Cuántos kilogramos aumentó o disminuyó su peso?",["¿Cuántos kilos?"],"Datos del Asegurado","Datos Persona","datosFormulario.personas[].cantidadKilogramosVariacionPeso",1],
+["¿Cuál fue el motivo de la variación de peso?",["Motivo"],"Datos del Asegurado","Datos Persona","datosFormulario.personas[].motivoVariacionPeso",1],
+["Parentesco",["Relación familiar"],"Datos del Beneficiario","Datos Beneficiario","datosFormulario.personas[].parentesco",1],
+["Porcentaje",["Porcentaje de participación","Participación beneficiario","Porcentaje %"],"Datos del Beneficiario","Datos Beneficiario","datosFormulario.personas[].porcentajeParticipacion",1],
+["Detalle otro beneficiario",["Otro parentesco"],"Datos del Beneficiario","Datos Beneficiario","datosFormulario.personas[].detalleOtroBeneficiario",1],
+["Interés asegurable",["Relación con el beneficiario","Interés asegurable o la relación existente con el otro beneficiario"],"Datos del Beneficiario","Datos Beneficiario","datosFormulario.personas[].interesAsegurableOtroBeneficiario",1],
+["¿Desea agregar beneficiarios?",["Agregar beneficiario"],"Datos del Beneficiario","Datos Beneficiario","datosFormulario.personas[].indicadorAgregarBeneficiario",1],
+["Parentesco",[],"Datos del Beneficiario","Datos Beneficiario","datosFormulario.personas[].codigoParentesco",1],
+["Porcentaje",[],"Datos del Beneficiario","Datos Beneficiario","datosFormulario.personas[].porcentaje",1],
+["Descripción parentesco",[],"Datos del Beneficiario","Datos Beneficiario","datosFormulario.personas[].descripcionParentesco",0],
+["¿Desea agregar un dependiente menor de edad?",["Agregar dependiente menor"],"Datos del Dependiente","Datos Dependiente","datosFormulario.personas[].indicadorAgregarDependienteMenor",1],
+["Peso",["Peso corporal","Kgs"],"Información del riesgo","Antecedentes personales","datosFormulario.personas[].peso",1],
+["Estatura",["Altura","Mts"],"Información del riesgo","Antecedentes personales","datosFormulario.personas[].estatura",1],
+["Cambio de peso",["Variación de peso","Cantidad de kilos","Variación en kilos","¿Cuántos kilos?","Motivo del cambio de peso","Motivo","Detalle de cambio","Detalle del cambio de salud","Detalle","En los últimos 6 meses su peso ha"],"Información del riesgo","Antecedentes personales","datosFormulario.personas[].riesgo[].cambiosImportantesSalud[].detalle",1],
+["Cambio importante de salud",["Cambios importantes de salud","Variación de peso"],"Información del riesgo","Antecedentes personales","datosFormulario.personas[].riesgo[].cambiosImportantesSalud[].indicador",1],
+["Nombre de quien padece",["Persona afectada","Quién padece"],"Información del riesgo","Antecedentes personales","datosFormulario.personas[].riesgo[].cambiosImportantesSalud[].quienPadece",1],
+["¿Es o ha sido alcohólico?",["Antecedente de alcoholismo","¿Es usted o ha sido alcohólico?"],"Información del riesgo","Alcohol","datosFormulario.personas[].riesgo[].bebidasAlcoholicas.indicadorAlcoholismo",1],
+["Detalles sobre el consumo o antecedentes de alcoholismo",["Detalle de alcoholismo","Patrón de consumo","Detalles:"],"Información del riesgo","Alcohol","datosFormulario.personas[].riesgo[].bebidasAlcoholicas.detalleAlcoholismo",1],
+["Usa bebidas alcohólicas",["Consumo de alcohol","Bebidas alcohólicas","¿Consume bebidas alcohólicas?","¿Usa bebidas alcohólicas?"],"Información del riesgo","Alcohol","datosFormulario.personas[].riesgo[].bebidasAlcoholicas.indicador",1],
+["Clase",["Tipo de bebida","Clase de bebida","a) Clase:","Tipo de bebida alcohólica"],"Información del riesgo","Alcohol","datosFormulario.personas[].riesgo[].bebidasAlcoholicas.detalleTipo",1],
+["Cantidad",["Cantidad consumida","Unidades","c) Cantidad","Cantidad de bebidas alcohólicas consumidas"],"Información del riesgo","Alcohol","datosFormulario.personas[].riesgo[].bebidasAlcoholicas.detalleCantidad",1],
+["Frecuencia",["Frecuencia de consumo","b) Frecuencia:","Frecuencia de consumo de bebidas alcohólicas"],"Información del riesgo","Alcohol","datosFormulario.personas[].riesgo[].bebidasAlcoholicas.detalleFrecuencia",1],
+["Tiempo que lleva consumiendo bebidas alcohólicas",["¿Indique desde hace cuanto?"],"Información del riesgo","Alcohol","datosFormulario.personas[].riesgo[].bebidasAlcoholicas.tiempoConsumoBebidasAlcoholicas",1],
+["¿Tiene alguna intervención quirúrgica pendiente?",["Cirugías pendientes","¿Intervenciones quirúrgicas pendientes?"],"Información del riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].intervencionQuirurgica[].indicadorIntervencionQuirurgicaPendiente",1],
+["Intervenciones quirúrgicas realizadas",["Cirugías realizadas","Indicador de intervención","¿Intervenciones quirúrgicas realizadas?"],"Información del riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].indicadorIntervencionQuirurgica",1],
+["Nombre de quien fue intervenido",["Persona intervenida","Paciente"],"Información del riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].intervencionQuirurgica[].nombreQuienFueIntervenido",1],
+["Causa de la intervención",["Causa de cirugía","Motivo de intervención","En caso afirmativo detalle cuáles, motivo, fecha y estado actual"],"Información del riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].intervencionQuirurgica[].declaracionCausas",1],
+["Fecha del procedimiento",["Fecha de cirugía","Fecha de intervención"],"Información del riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].intervencionQuirurgica[].fechaProcedimiento",1],
+["Hospital del procedimiento",["Centro hospitalario","Hospital o clínica"],"Información del riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].intervencionQuirurgica[].hospitalProcedimiento",1],
+["Nombre del cirujano",["Cirujano","Médico tratante"],"Información del riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].intervencionQuirurgica[].nombreCirujano",1],
+["¿Se ha sometido a alguna intervención quirúrgica?",["¿Intervenciones quirúrgicas realizadas?"],"Información del riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].intervencionQuirurgica[].indicador",1],
+["Detalles de las intervenciones quirúrgicas realizadas",["En caso afirmativo detalle cuáles, motivo, fecha y estado actual"],"Información del riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].intervencionQuirurgica[].detalleIntervencionesQuirurgicasRealizadas",1],
+["Detalles de las intervenciones quirúrgicas pendientes",["En caso afirmativo detalle cuáles, motivo y su fecha de realización:"],"Información del riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].intervencionQuirurgica[].detalleIntervencionesQuirurgicasPendientes",1],
+["Incapacidad por invalidez",["¿Está usted tramitando o tiene pensado tramitar en el corto plazo una incapacidad por invalidez?","¿Está tramitando o planea tramitar próximamente una incapacidad por invalidez?","¿Está tramitando una incapacidad por invalidez?"],"Información del riesgo","Preguntas Adicionales","datosFormulario.personas[].riesgo[].indicadorTramitaIncapacidadInvalidez",1],
+["Complicaciones durante el embarazo",["Complicaciones del embarazo","¿Ha tenido alguna complicación?"],"Información del riesgo","Preguntas Adicionales","datosFormulario.personas[].riesgo[].embarazo[].complicacionesEmbarazo",1],
+["Se encuentra embarazada",["Embarazo actual","Indicador de embarazo","¿Está embarazada actualmente?","¿Se encuentra actualmente embarazada?"],"Información del riesgo","Preguntas Adicionales","datosFormulario.personas[].riesgo[].embarazo[].indicador",1],
+["Nombre de quien está embarazada",["Persona embarazada"],"Información del riesgo","Preguntas Adicionales","datosFormulario.personas[].riesgo[].embarazo[].nombreQuienEstaEmbarazada",1],
+["Semanas de gestación",["Tiempo de embarazo","¿Cuánto tiempo tiene de embarazo?"],"Información del riesgo","Preguntas Adicionales","datosFormulario.personas[].riesgo[].embarazo[].numeroSemanasGestacion",1],
+["Tipo de reproducción",["Método de reproducción","Reproducción natural o asistida"],"Información del riesgo","Preguntas Adicionales","datosFormulario.personas[].riesgo[].embarazo[].codigoTipoReproduccion",1],
+["Método asistido",["Descripción del método asistido"],"Información del riesgo","Preguntas Adicionales","datosFormulario.personas[].riesgo[].embarazo[].descripcionMetodoAsistido",1],
+["Condición de salud",["Condición de salud","Enfermedad","Padecimiento","¿Padece o ha padecido alguna condición?"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].condicionSalud.indicador",1],
+["Detalle de condición",["Detalle de condición","Detalle de salud","Nombre de la condición, enfermedad o traumatismo"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].condicionSalud.detalle",1],
+["Enfermedad de alto impacto",["Condición de alto impacto","Enfermedad grave"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedadAltoImpacto[].indicador",1],
+["Detalle",["Descripción","Detalle de condición","Detalle de enfermedad de alto impacto"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedadAltoImpacto[].detalle",1],
+["Nombre de quien padece",["Persona enferma","Paciente"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].nombreQuienPadece",1],
+["Categoría",["Tipo de padecimiento","Categoría","Categoría de la enfermedad"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].detalleCategoria",1],
+["Detalle de enfermedad",["Detalle de enfermedad","Padecimiento","Nombre de la condición, enfermedad o traumatismo"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].detalle",1],
+["Médico, clínica u hospital",["Médico","Clínica","Hospital","Nombre y dirección de médicos que le atendieron, clínica u hospital"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].nombreMedicoClinicaHospital",1],
+["Fecha de inicio",["Fecha de inicio","Inicio del padecimiento","Fecha de diagnóstico"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].fechaInicio",1],
+["Duración",["Tiempo de evolución","Antigüedad"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].duracion",1],
+["Resultado / estado actual",["Resultado","Evolución","Activa","Controlada","Resuelta","En estudio","Estado actual"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].resultado",1],
+["Tratamiento",["Indicador de tratamiento","Recibe tratamiento","Tratamiento recibido"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].indicadorTratamiento",1],
+["Nombre del medicamento",["Medicamento","Tratamiento farmacológico"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].nombreMedicamento",1],
+["Complicaciones",["Detalle de complicaciones"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].detalleComplicaciones",1],
+["Pruebas de azúcar",["Control de glucosa","Indicador de pruebas"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].indicadorPruebasAzucar",1],
+["Tipo de control",["Clase de prueba","Hemoglobina glicosilada"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].tipoControl",1],
+["Resultados de pruebas",["Resultados de azúcar","Valores de laboratorio"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].resultadosPruebas",1],
+["Presión arterial",["Control de presión","Indicador de presión arterial"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].indicadorPresionArterial",1],
+["Resultados de presión arterial",["Lecturas de presión","Valores de presión"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].resultadosPresionArterial",1],
+["Antígeno prostático",["PSA","Indicador de antígeno prostático"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].indicadorAntigenoProstatico",1],
+["Resultados de antígeno prostático",["Resultados PSA","Valores de antígeno"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].resultadosAntigenoProstatico",1],
+["¿Padece o ha padecido alguna condición, enfermedad o traumatismo que haya requerido atención, tratamiento, estudios o seguimiento médico?",["¿Padece o ha padecido alguna condición, estado, enfermedad o traumatismo agudo o crónico por la cual ha recibido consulta, tratamiento médico, servicios, chequeos, hospitalizaciones, controles y/o medicamentos o se encuentran en estudio?"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].indicadorCondicionEnfermedadOTraumatismo",1],
+["Nombre de la condición, enfermedad o traumatismo",[],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].padecimientos[].nombreCondicionEnfermedadOTraumatismo",1],
+["Fecha de diagnóstico",[],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].padecimientos[].fechaDiagnostico",1],
+["Tratamientos recibidos",["Tratamiento(s) recibido(s)"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].padecimientos[].tratamientosRecibidos",1],
+["Estado actual de la condición, enfermedad o traumatismo",["Estado actual"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].padecimientos[].codigoEstadoActualCondicion",1],
+["Fecha de alta médica",["Si fue dado de alta ¿En qué fecha?"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].padecimientos[].fechaAltaMedica",1],
+["Nombre y dirección de los médicos, clínicas u hospitales que le atendieron",["Nombre y dirección de médicos que le atendieron, clínica u hospital"],"Información del riesgo","Padecimientos","datosFormulario.personas[].riesgo[].padecimientos[].nombreMedicoClinicaHospital",1],
+["Uso de droga o medicamento",["Drogas","Sustancias psicoactivas","Medicamentos","¿Consume o ha consumido alguna droga o sustancia psicoactiva?"],"Información del riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.indicadorUso",1],
+["Nombre de quien usa",["Persona que usa","Quién consume"],"Información del riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.nombreQuienUsa",1],
+["Frecuencia",["Frecuencia de uso o consumo"],"Información del riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.frecuencia",1],
+["Cantidad",["Cantidad de uso o consumo","Dosis"],"Información del riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.cantidad",1],
+["Motivo",["Motivo de uso","Razón del tratamiento"],"Información del riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.motivo",1],
+["Nombre",["Sustancia","Medicamento","Tratamiento","Nombre de la sustancia, medicamento o tratamiento"],"Información del riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.nombre",1],
+["¿Consume o ha consumido drogas o sustancias psicoactivas?",["¿Consume o ha consumido alguna droga o sustancia psicoactiva con fines recreativos o por indicación médica?"],"Información del riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.indicadorUso",1],
+["Detalles sobre el uso de drogas o sustancias psicoactivas",["En caso afirmativo, detalle: nombre de la sustancia, motivo de uso, frecuencia, cantidad y fecha del último consumo."],"Información del riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.detalleUso",1],
+["¿Utiliza medicamentos o tratamientos médicos actualmente, o ha recibido medicina nuclear, isótopos radioactivos o quimioterapia?",["Uso actual de medicamentos","Tratamiento médico actual","¿Utiliza actualmente algún medicamento o tratamiento médico, o ha recibido medicina nuclear, isótopos radioactivos o quimioterapia?"],"Información del riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.indicadorUsoMedicamentos",1],
+["Detalles de medicamentos o tratamientos médicos",["En caso afirmativo, indique: nombre del medicamento o tratamiento, motivo de uso, frecuencia, fecha de inicio y dosis."],"Información del riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.detalleUsoMedicamentos",1],
+["Alguna vez ha fumado",["Fumador","Tabaquismo","¿Ha fumado alguna vez?","¿Alguna vez ha fumado?"],"Información del riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.indicadorFumador",1],
+["Cantidad fumada diaria",["Consumo diario","Cantididad diaria de cigarrillo, puro o ml:","Cantidad diaria de cigarrillos, puros o líquido de vapeo","Cantidad diaria de cigarrillo, puro o ml"],"Información del riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.cantidadFumadoDiario",1],
+["Hace cuánto tiempo fuma",["Tiempo fumando","Antigüedad de fumado","¿Hace cuánto tiempo?","Tiempo que lleva fumando o vapeando","¿Hace cuánto tiempo fuma?"],"Información del riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.haceCuantoTiempoFuma",1],
+["Vapea actualmente",["Vapeo actual","Usa vaporizador","¿Vapea actualmente?"],"Información del riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.indicadorVapea",1],
+["Cantidad de vapeo diario",["Cantidad de vapeo diario","ml diarios","Cantidad diaria de vapeo"],"Información del riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.cantidadVapeoDiario",1],
+["Hace cuánto tiempo vapea",["Tiempo vapeando","Antigüedad de vapeo","¿Hace cuánto tiempo vapea?"],"Información del riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.haceCuantoTiempoVapea",1],
+["Dejó de fumar",["Exfumador","¿Dejó de consumir?"],"Información del riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.indicadorDejoDeFumar",1],
+["Hace cuánto dejó de fumar",["Tiempo desde que dejó de fumar","¿Hace cuánto?","Tiempo transcurrido desde que dejó de fumar o vapear","¿Hace cuánto dejó de fumar?"],"Información del riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.haceCuantoTiempoDejoDeFumar",1],
+["¿Fuma actualmente?",["Fumador actual"],"Información del riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.indicadorFumaActualmente",1],
+["¿Dejó de vapear?",["Exvapeador"],"Información del riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.indicadorDejoVapear",1],
+["Consulta médica",["Indicador de consulta médica","Recibió consulta"],"Información del riesgo","Consultas Médicas","datosFormulario.personas[].riesgo[].indicadorConsultaMedica",1],
+["Quién consulta",["Persona que consulta","Paciente"],"Información del riesgo","Consultas Médicas","datosFormulario.personas[].riesgo[].consultaMedica[].quienConsulta",1],
+["Motivo de consulta",["Detalle del motivo","Razón de consulta"],"Información del riesgo","Consultas Médicas","datosFormulario.personas[].riesgo[].consultaMedica[].detalleMotivo",1],
+["Diagnóstico médico",["Diagnóstico de consulta"],"Información del riesgo","Consultas Médicas","datosFormulario.personas[].riesgo[].consultaMedica[].diagnosticoMedico",1],
+["Nombre del médico tratante",["Médico","Profesional tratante"],"Información del riesgo","Consultas Médicas","datosFormulario.personas[].riesgo[].consultaMedica[].nombreMedicoTratante",1],
+["Diagnóstico especial",["Indicador de diagnóstico especial","Examen especial"],"Información del riesgo","Diagnósticos Especiales","datosFormulario.personas[].riesgo[].indicadorDiagnosticoEspecial",1],
+["Quién consulta",["Persona evaluada","Paciente"],"Información del riesgo","Diagnósticos Especiales","datosFormulario.personas[].riesgo[].diagnosticoEspecial[].quienConsulta",1],
+["Motivo",["Motivo del diagnóstico o examen"],"Información del riesgo","Diagnósticos Especiales","datosFormulario.personas[].riesgo[].diagnosticoEspecial[].motivo",1],
+["Resultado",["Resultado del examen","Hallazgos"],"Información del riesgo","Diagnósticos Especiales","datosFormulario.personas[].riesgo[].diagnosticoEspecial[].resultado",1],
+["Nombre del médico tratante",["Médico","Profesional tratante"],"Información del riesgo","Diagnósticos Especiales","datosFormulario.personas[].riesgo[].diagnosticoEspecial[].nombreMedicoTratante",1],
+["Diagnóstico COVID-19",["COVID","SARS-CoV-2","Resultado positivo","¿Ha sido diagnosticado con COVID-19?"],"Información del riesgo","COVID","datosFormulario.personas[].riesgo[].covid.indicadorPositivo",1],
+["Fecha de diagnóstico",["Fecha de diagnóstico COVID"],"Información del riesgo","COVID","datosFormulario.personas[].riesgo[].covid.fechaDiagnostico",1],
+["Fecha de alta",["Alta COVID","Fecha de recuperación"],"Información del riesgo","COVID","datosFormulario.personas[].riesgo[].covid.fechaAlta",1],
+["Requirió hospitalización",["Hospitalización por COVID","¿Requirió hospitalización?"],"Información del riesgo","COVID","datosFormulario.personas[].riesgo[].covid.indicadorHospitalizacion",1],
+["Centro hospitalario",["Hospital","Clínica de atención"],"Información del riesgo","COVID","datosFormulario.personas[].riesgo[].covid.centroHospitalario",1],
+["Tipo de atención",["Descripción de atención"],"Información del riesgo","COVID","datosFormulario.personas[].riesgo[].covid.descripcionTipoAtencion",1],
+["Síntomas o secuelas",["Detalle de síntomas","Secuelas COVID"],"Información del riesgo","COVID","datosFormulario.personas[].riesgo[].covid.detalleSintomasSecuelas",1],
+["Vacunación completa SARS-CoV-2",["Vacunación completa COVID","¿Tiene vacunación completa contra SARS-CoV-2?"],"Información del riesgo","COVID","datosFormulario.personas[].riesgo[].covid.indicadorVacunacionCompletaSarsCov2",1],
+["Fecha de última dosis SARS-CoV-2",["Última dosis COVID","Fecha de vacunación","Fecha de última dosis"],"Información del riesgo","COVID","datosFormulario.personas[].riesgo[].covid.fechaUltimaDosisSarsCov2",1],
+["Autorización",["Consentimiento del cliente","Autorización para revisar expedientes","Adicionalmente, autorizo la revisión de los expedientes de los solicitantes o los asegurados suscrito en este formulario cuando tenga la condición de menor de edad.","Adicionalmente, autorizo la revisión de los expedientes..."],"Declaraciones y Autorización","Autorizaciones","datosFormulario.datosGenerales.indicadorClienteDaConsentimiento",1],
+["Consentimiento",["Consentimiento de la persona"],"Declaraciones y Autorización","Autorizaciones","datosFormulario.personas[].indicadorClienteDaConsentimiento",1],
+["Acepta términos",["Aceptación de términos","He leído y comprendo el texto anterior, y declaro que la información es verídica y acepto las condiciones y autorizaciones descritas. ¿Acepta usted estos términos?","He leído y comprendo el texto anterior... ¿Acepta usted estos términos?"],"Declaraciones y Autorización","Declaraciones Legales","datosFormulario.datosGenerales.indicadorAceptaTerminos",1]
+];
+/*DIC:END*/
+const dicNorm=s=>fbSlug(String(s||"").replace(/[¿?:]/g,""));
+const dicPathKey=p=>String(p||"").replace(/\[(\d*|i)\]/gi,"[]");          /* [0] / [i] / [] → [] */
+const dicLoose=p=>String(p||"").replace(/\[(\d*|i)\]/gi,"");              /* sin corchetes: lista ≈ objeto */
+let DIC_IX=null;
+function dicIx(){
+  if(DIC_IX)return DIC_IX;
+  const by=new Map(),path=new Map(),loose=new Map();
+  DIC.forEach((d,i)=>{[d[0],...d[1]].forEach(n=>{const k=dicNorm(n);if(!k)return;if(!by.has(k))by.set(k,[]);if(!by.get(k).includes(i))by.get(k).push(i)});
+    const pk=dicPathKey(d[4]);if(!path.has(pk))path.set(pk,i);const lk=dicLoose(d[4]);if(!loose.has(lk))loose.set(lk,i)});
+  return DIC_IX={by,path,loose,toks:DIC.map(d=>[d[0],...d[1]].map(n=>fbToks(n)))};
+}
+/* candidatos del diccionario para un texto: nombre web / sinónimo / nombre PDF exacto; si no, similitud ≥ 1.0 */
+function dicFind(label,ctx){
+  const k=dicNorm(label);if(!k||!DIC.length)return[];const I=dicIx();
+  let c=(I.by.get(k)||[]).slice();
+  if(!c.length){const t=fbToks(label);let best=0;
+    DIC.forEach((d,i)=>{const s=Math.max(0,...I.toks[i].map(x=>fbSim(t,x)));if(s>=1&&s>=best){if(s>best){best=s;c=[]}c.push(i)}})}
+  if(c.length>1&&ctx){const ct=fbToks(ctx);c=c.map(i=>[i,fbSim(ct,fbToks(DIC[i][2]+" "+DIC[i][3]))]).sort((a,b)=>b[1]-a[1]).map(x=>x[0])}
+  return c;
+}
+/* una ruta del JSON contra el diccionario: ok (igual) / est (igual salvo lista vs objeto) / none */
+function dicPathSt(path){
+  if(!path||!DIC.length)return{st:"none",i:-1};const I=dicIx();
+  const a=I.path.get(dicPathKey(path));if(a!=null)return{st:"ok",i:a};
+  const b=I.loose.get(dicLoose(path));return b!=null?{st:"est",i:b}:{st:"none",i:-1};
+}
+/* la ruta del diccionario en el JSON cargado */
+function dicJsonPath(ruta){
+  const k=dicPathKey(ruta),l=dicLoose(ruta);
+  const a=ST.paths.find(p=>dicPathKey(p.path)===k);if(a)return{path:a.path,st:"ok"};
+  const b=ST.paths.find(p=>dicLoose(p.path)===l);return b?{path:b.path,st:"est"}:null;
+}
+/* entrada del diccionario de una pregunta: primero por su ruta JSON, después por el nombre */
+function dicOf(q){
+  if(!q||!DIC.length)return null;const r=fbRoot(q);
+  if(q.json){const s=dicPathSt(q.json);if(s.st!=="none")return{i:s.i,by:"ruta"}}
+  const c=dicFind(q.label,secTitle(r.sid)+" "+(r.sub||""));if(!c.length)return null;
+  const inJ=c.find(i=>{const j=dicJsonPath(DIC[i][4]);return j&&j.st==="ok"})??c.find(i=>dicJsonPath(DIC[i][4]))??c[0];
+  return{i:inJ,by:"nombre"};
+}
+/* estado de la pregunta vs. el diccionario: ok / est (lista vs objeto) / dif (otra ruta) / sinruta / none */
+function dicState(q){
+  const o=dicOf(q);if(!o)return{st:"none"};const d=DIC[o.i];
+  if(!q.json)return{st:"sinruta",d};
+  if(dicPathKey(q.json)===dicPathKey(d[4]))return{st:"ok",d};
+  if(dicLoose(q.json)===dicLoose(d[4]))return{st:"est",d};
+  return{st:"dif",d};
+}
+const DIC_TXT={ok:"Coincide",est:"Distinta (lista / objeto)",dif:"Distinta",sinruta:"Sin ruta",none:"No está"};
+function f2DicChip(q){
+  if(q.parentId||!DIC.length)return"";const s=dicState(q);if(s.st==="none")return"";
+  const r=tplPath(s.d[4]);
+  return s.st==="ok"?`<span class="dchip ok" title="Diccionario INS: ${esc(s.d[0])} · ${esc(r)}">✓ Diccionario</span>`
+    :s.st==="sinruta"?`<span class="dchip sug" title="Diccionario INS: ${esc(s.d[0])}">Diccionario: ${esc(r)}</span>`
+    :`<span class="dchip dif" title="El diccionario dice ${esc(r)}">≠ Diccionario${s.st==="est"?" · lista/objeto":""}</span>`;
+}
+function f2DicBlk(q){
+  if(q.parentId||!DIC.length)return"";const o=dicOf(q);
+  if(!o)return`<div class="f2e-blk"><div class="f2e-h">Diccionario INS</div><p class="hint">Esta pregunta no está en el Diccionario INS.</p></div>`;
+  const d=DIC[o.i],s=dicState(q),jp=ST.paths.length?dicJsonPath(d[4]):null;
+  const enJ=!ST.paths.length?"No hay JSON cargado.":jp?(jp.st==="ok"?"✓ Está en el JSON cargado.":`≠ En el JSON es distinta (lista / objeto): ${esc(tplPath(jp.path))}`):"No está en el JSON cargado.";
+  return`<div class="f2e-blk"><div class="f2e-h">Diccionario INS</div>
+    <p class="hint"><b>${esc(d[0])}</b> · ${esc(d[2])} › ${esc(d[3])} · ${d[5]?"visible":"oculto"}${o.by==="ruta"?" · reconocida por la ruta":""}</p>
+    <div class="chips"><span class="dchip ${s.st==="ok"?"ok":s.st==="sinruta"?"sug":"dif"}">${esc(tplPath(d[4]))}</span>${s.st==="ok"?"":`<button class="mini" data-act="usedic">Usar la del diccionario</button>`}</div>
+    <p class="hint">${enJ}</p></div>`;
+}
+function f2UseDic(q){
+  const o=dicOf(q);if(!o)return;const d=DIC[o.i];const jp=dicJsonPath(d[4]);
+  const prev=ST.Q.find(x=>x!==q&&x.json===(jp?jp.path:d[4]));if(prev){prev.json=null;prev.jsonOk=false}
+  q.json=jp?jp.path:d[4];q.jsonOk=true;if(!q.sub)q.sub=d[3];if(q.json.includes("[]")&&!q._subRep)q.repeat=true;
+}
+/* Ordenar y ubicar por el diccionario lo que se reconoce con evidencia del JSON (ruta del diccionario en el JSON) */
+function f2DicArrange(){
+  if(!DIC.length)return 0;let n=0;
+  const secFor=t=>{let s=ST.S.find(x=>x.title===t);if(!s){s={id:ST.nid++,title:t,hidden:fbSlug(t)===fbSlug(SYS_SEC),cond:null,condTxt:"",notes:"",subs:[]};ST.S.push(s)}return s};
+  ST.Q.forEach(q=>{if(q.parentId)return;
+    let i=-1,strong=false;
+    if(q.json){const s=dicPathSt(q.json);if(s.st!=="none"){i=s.i;strong=true}}
+    if(i<0){const c=dicFind(q.label,secTitle(q.sid));const hit=c.find(k=>{const j=dicJsonPath(DIC[k][4]);return j&&!ST.Q.some(x=>x!==q&&x.json===j.path)});
+      if(hit!=null){i=hit;const j=dicJsonPath(DIC[i][4]);q.json=j.path;q.jsonOk=j.st==="ok";strong=true}}
+    if(!strong)return;const d=DIC[i];q.dicI=i;
+    if(dicNorm(q.label)!==dicNorm(d[0])&&!d[1].some(x=>dicNorm(x)===dicNorm(q.label)))q.label=d[0];
+    const s=secFor(d[2]);q.sid=s.id;fbParts(q).forEach(p=>p.sid=s.id);q.sub=d[3];
+    if(!d[5]&&!s.hidden){q.oculto=true;q.hiddenSrc=q.hiddenSrc||"Viene del sistema";q.rule=q.rule||"Viene del sistema"}
+    if(q.json&&q.json.includes("[]")&&!q._subRep)q.repeat=true;n++});
+  /* datos del JSON sin pregunta que están en el diccionario: van con su paso / sección, visibles u ocultos según el diccionario */
+  const owned=new Set(ST.Q.map(q=>q.json).filter(Boolean));
+  ST.paths.forEach(p=>{if(owned.has(p.path))return;const st=dicPathSt(p.path);if(st.st==="none")return;const d=DIC[st.i];
+    const s=secFor(d[2]);const q=f2FromPath(p,s.id);q.label=d[0];q.sub=d[3];q.inPdf=false;q.jsonOk=st.st==="ok";q.dicI=st.i;owned.add(p.path);
+    if(!d[5]){q.origin="Sistema (no se ve)";q.hiddenSrc="Viene del sistema";q.rule="Viene del sistema";if(!s.hidden)q.oculto=true}n++});
+  return n;
+}
 /* ── Paso 2 · Armar el formulario (preguntas primero) ── */
 const fbPretty=s=>{const t=String(s||"").replace(/_/g," ").trim();return t?t[0].toUpperCase()+t.slice(1):""};
 function fbSlug(t){return String(t||"").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"")}
@@ -1044,6 +1334,7 @@ function f2ActiveSid(){if(!ST.S.length)ST.S.push({id:ST.nid++,title:"Sección 1"
 /* sugerencias */
 function f2SuggestJson(q){
   if(!ST.paths.length)return null;const used=new Set(ST.Q.filter(x=>x!==q&&x.json).map(x=>x.json));
+  {const r=fbRoot(q);for(const i of dicFind(q.label,secTitle(r.sid)+" "+(r.sub||""))){const j=dicJsonPath(DIC[i][4]);if(j&&!used.has(j.path))return j.path}}
   const bt=q.boxes.length?fbToks(rn.rows[q.boxes[0]].nuevo.replace(/_/g," ").replace(/\d+/g," ").replace(/\b(dia|mes|ano|si|no)\b/g," ")):[];
   let best=null;ST.paths.forEach(p=>{if(used.has(p.path))return;const pt=fbToks(p.path);const s=Math.max(fbSim(qToks(q),pt,q.repeat,p.arr),bt.length?fbSim(bt,pt,q.repeat,p.arr):0);if(s>=0.75&&(!best||s>best.s))best={p,s}});
   return best?best.p.path:null;
@@ -1053,7 +1344,9 @@ function f2SuggestBoxes(q){
   rn.rows.forEach(r=>{if(fbOwner(r.i))return;const s=fbSim(qt,fbToks(r.nuevo.replace(/_/g," ").replace(/\d+/g," ")));if(s>=0.6)out.push({i:r.i,s})});
   out.sort((a,b)=>b.s-a.s);return out.slice(0,6).map(o=>o.i);
 }
-function f2AutoJson(q){if(fbParts(q).length){if(q.json&&!q.jsonOk)q.json=null;return}if(!q.json){const p=f2SuggestJson(q);if(p){q.json=p;q.jsonOk=false}}}
+function f2AutoJson(q){if(fbParts(q).length){if(q.json&&!q.jsonOk)q.json=null;return}if(!q.json){const p=f2SuggestJson(q);if(p){q.json=p;q.jsonOk=false}}
+  /* sección del diccionario solo con evidencia: reconocida por la ruta o ya en el paso del diccionario */
+  if(!q.parentId&&!q.sub){const o=dicOf(q);if(o&&(o.by==="ruta"||DIC[o.i][2]===secTitle(q.sid)))q.sub=DIC[o.i][3]}}
 /* proponer (opcional) */
 function f2ProposeFromPdf(){
   const rows=rn.rows,used=new Set(rows.filter(r=>fbOwner(r.i)).map(r=>r.i));
@@ -1155,7 +1448,7 @@ function f2Card(q){
     <div class="f2q-row">${q.parentId?'<span class="grip">↳</span>':'<span class="grip" title="Arrastrá para mover">⋮⋮</span>'}<span class="ti" title="${esc(q.type)}">${f2TypeIcon(parts.length?"Texto corto":q.type)}</span>
       <span class="lb">${esc(q.label)}${q.req&&!parts.length?'<b class="req">*</b>':""}</span>
       ${q.parentId?"":`<button class="mini" data-act="up" aria-label="Subir">↑</button><button class="mini" data-act="down" aria-label="Bajar">↓</button>`}</div>
-    <div class="f2q-meta">${q.oculto?'<span class="hidb">dato oculto</span>':""}${parts.length?`<span class="pchip">se arma con ${parts.map(p=>esc(p.label)).join(" + ")}</span>`:""}${q.cond&&q.cond.qid&&fbQ(q.cond.qid)?`<span class="cchip">👁 si ${esc(condText(q))}</span>`:""}${q.origin&&q.origin!=="La completa la persona"?`<span class="pchip">${esc(q.origin)}</span>`:""}${pdf}${js}</div>
+    <div class="f2q-meta">${f2DicChip(q)}${q.oculto?'<span class="hidb">dato oculto</span>':""}${parts.length?`<span class="pchip">se arma con ${parts.map(p=>esc(p.label)).join(" + ")}</span>`:""}${q.cond&&q.cond.qid&&fbQ(q.cond.qid)?`<span class="cchip">👁 si ${esc(condText(q))}</span>`:""}${q.origin&&q.origin!=="La completa la persona"?`<span class="pchip">${esc(q.origin)}</span>`:""}${pdf}${js}</div>
     ${open?f2Editor(q):""}</div>`;
 }
 function f2Editor(q){
@@ -1178,6 +1471,7 @@ function f2Editor(q){
       ${q.parentId?`<p class="hint">Va escrito junto con las otras partes en el casillero de «${esc((fbQ(q.parentId)||{}).label)}».</p>`:`
       <div class="chips">${q.boxes.map(i=>`<span class="bchip">${esc(rn.rows[i].nuevo)}${f2RoleSel(q,i)}<button data-act="unbox" data-i="${i}" aria-label="Quitar casillero">×</button></span>`).join("")||'<span class="hint">Sin casilleros. Tocá casilleros libres en el PDF para sumarlos.</span>'}</div>
       ${sugB.length?`<div class="chips sug"><span class="hint">Sugeridos:</span>${sugB.map(i=>`<button class="bchip add" data-act="addbox" data-i="${i}">+ ${esc(rn.rows[i].nuevo)}</button>`).join("")}</div>`:""}`}</div>
+    ${f2DicBlk(q)}
     <div class="f2e-blk"><div class="f2e-h">JSON</div>
       ${q.json?`<div class="chips"><span class="jchip ${q.jsonOk?"ok":"sug"}">${esc(tplPath(q.json))}</span>${q.jsonOk?"":`<button class="mini" data-act="okj">Confirmar</button>`}<button class="mini" data-act="nojson">Quitar</button></div>`:`<span class="hint">${ST.paths.length?"Tocá un dato en el panel del JSON para unirlo.":"No hay JSON cargado."}</span>`}</div>
     ${canSplit?`<div class="f2e-blk"><div class="f2e-h">Partes ${parts.length?"":"<span class='hint'>(opcional)</span>"}</div>
@@ -1233,14 +1527,14 @@ function f2Json(){
   const by=new Map();ST.Q.forEach(q=>{if(q.json)by.set(q.json,q)});
   const fil=$("#f2-jf").value;
   box.innerHTML=ST.paths.filter(p=>(!js||p.path.toLowerCase().includes(js)||String(p.ex).toLowerCase().includes(js))&&(fil==="all"||(fil==="free"&&!by.has(p.path))||(fil==="used"&&by.has(p.path)))).map(p=>{const u=by.get(p.path);const mine=sel&&u&&u.id===sel.id;
-    return `<div class="jp${u?" used":""}${mine?" mine":""}" data-path="${esc(p.path)}"><button class="jp-m" data-path="${esc(p.path)}"><span class="mono">${esc(tplPath(p.path))}${p.arr?' <span class="tag">se repite</span>':""}</span><span class="ex">${esc(typeof p.ex==="string"?p.ex:JSON.stringify(p.ex))}${u?` · ${esc(u.label)}${u.jsonOk?"":" (sugerido)"}`:""}</span></button><button class="mini" data-newq="${esc(p.path)}" title="Crear una pregunta con este dato">+ pregunta</button></div>`}).join("")||'<p class="f2-empty">Nada coincide con la búsqueda.</p>';
+    return `<div class="jp${u?" used":""}${mine?" mine":""}" data-path="${esc(p.path)}"><button class="jp-m" data-path="${esc(p.path)}"><span class="mono">${esc(tplPath(p.path))}${p.arr?' <span class="tag">se repite</span>':""}${(()=>{const t=dicPathSt(p.path);return t.st==="ok"?' <span class="tag dic" title="'+esc(DIC[t.i][0])+'">✓ dic</span>':t.st==="est"?' <span class="tag dicx" title="'+esc(DIC[t.i][0])+' · lista / objeto">≠ dic</span>':""})()}</span><span class="ex">${esc(typeof p.ex==="string"?p.ex:JSON.stringify(p.ex))}${u?` · ${esc(u.label)}${u.jsonOk?"":" (sugerido)"}`:""}</span></button><button class="mini" data-newq="${esc(p.path)}" title="Crear una pregunta con este dato">+ pregunta</button></div>`}).join("")||'<p class="f2-empty">Nada coincide con la búsqueda.</p>';
 }
 function f2Stats(){
   const roots=ST.Q.filter(q=>!q.parentId);const asked=ST.Q.filter(q=>!fbParts(q).length);
   const noPdf=roots.filter(q=>!q.boxes.length&&!fbParts(q).length).length;
   const free=rn.rows.filter(r=>!fbOwner(r.i)).length;const by=new Set(ST.Q.map(q=>q.json).filter(Boolean));
   const freeP=ST.paths.filter(p=>!by.has(p.path)).length;const sug=ST.Q.filter(q=>q.json&&!q.jsonOk).length;const noJ=asked.filter(q=>!q.json).length;
-  $("#f2-stats").innerHTML=`<span><b>${ST.S.length}</b> secciones · <b>${asked.length}</b> preguntas</span><span class="${free?"w":""}"><b>${free}</b> de ${rn.rows.length} casilleros libres</span>${ST.paths.length?`<span class="${freeP?"w":""}"><b>${freeP}</b> de ${ST.paths.length} datos del JSON libres</span>`:""}${noJ?`<span><b>${noJ}</b> preguntas sin JSON</span>`:""}${sug?`<span class="s"><b>${sug}</b> sugerencias sin confirmar</span>`:""}`;
+  $("#f2-stats").innerHTML=`<span><b>${ST.S.length}</b> secciones · <b>${asked.length}</b> preguntas</span><span class="${free?"w":""}"><b>${free}</b> de ${rn.rows.length} casilleros libres</span>${ST.paths.length?`<span class="${freeP?"w":""}"><b>${freeP}</b> de ${ST.paths.length} datos del JSON libres</span>`:""}${noJ?`<span><b>${noJ}</b> preguntas sin JSON</span>`:""}${sug?`<span class="s"><b>${sug}</b> sugerencias sin confirmar</span>`:""}${DIC.length?(()=>{const st=asked.filter(q=>!q.parentId).map(q=>dicState(q).st);const ok=st.filter(x=>x==="ok").length,dif=st.filter(x=>x==="est"||x==="dif").length;return`<span><b>${ok}</b> coinciden con el Diccionario INS${dif?` · <b>${dif}</b> distintas`:""}</span>`})():""}`;
 }
 function fbAll(){f2Form();f2Json();f2Stats();if(!ST.pdfDone)f2RenderPdf();else f2PaintPdf()}
 function f2View(v){
@@ -1290,6 +1584,7 @@ $("#f2-form").addEventListener("click",e=>{
     case"unbox":f2RemoveBox(q,+e.target.dataset.i);break;
     case"addbox":f2AddBox(q,+e.target.dataset.i);f2AutoJson(q);break;
     case"okj":q.jsonOk=true;break;
+    case"usedic":f2UseDic(q);m.textContent=`«${q.label}» ↔ ${tplPath(q.json)} (Diccionario INS)`;break;
     case"nojson":q.json=null;q.jsonOk=false;break;
     case"addopt":q.opts.push({label:`Opción ${q.opts.length+1}`,code:"",box:null});break;
     case"delopt":q.opts.splice(+e.target.dataset.k,1);break;
@@ -1396,11 +1691,11 @@ async function f2Excel(msgEl){
   [["Formulario","Secciones y preguntas, con su PDF y su JSON"],["Opciones","Opciones de cada lista, con código y casilla del PDF"],["JSON del cliente","Cada dato del JSON y la pregunta que lo llena"],["Casilleros PDF","Nombre original y nuevo de cada casillero"],["Pendientes","Lo que falta resolver"]].forEach(([a,b])=>{const c=p0.getCell(`B${r}`);c.value={text:a,hyperlink:`#'${a}'!A1`};c.font=font({color:{argb:"FF2F6FD6"},underline:true});p0.getCell(`C${r}`).value=b;r++});
   /* Formulario */
   const w1=wb.addWorksheet("Formulario",{views:[{state:"frozen",ySplit:2,xSplit:4}],properties:{tabColor:{argb:C.blue}}});
-  const cols1=[["ID",8],["Sección",22],["Subsección",18],["#",5],["Pregunta",34],["Tipo de respuesta",22],["Obligatoria",11],["Origen",20],["Se repite",10],["Se arma con / parte de",28],["Se muestra si",32],["Opciones",30],["Reglas / formato",22],["Valor o cálculo",18],["Se ve en el PDF",10],["Casilleros del PDF",42],["Estado PDF",12],["Ruta JSON",40],["Estado JSON",13],["Notas",28]];
+  const cols1=[["ID",8],["Sección",22],["Subsección",18],["#",5],["Pregunta",34],["Tipo de respuesta",22],["Obligatoria",11],["Origen",20],["Se repite",10],["Se arma con / parte de",28],["Se muestra si",32],["Opciones",30],["Reglas / formato",22],["Valor o cálculo",18],["Se ve en el PDF",10],["Casilleros del PDF",42],["Estado PDF",12],["Ruta JSON",40],["Estado JSON",13],["Notas",28],["Ruta del diccionario",40],["Estado vs. diccionario",16]];
   const NC=cols1.length;
   w1.columns=cols1.map(([,w])=>({width:w}));
-  band(w1,1,1,14,"FORMULARIO",C.blue);band(w1,1,15,17,"PDF",C.amber);band(w1,1,18,19,"JSON",C.green);band(w1,1,20,20,"",C.gray);
-  hdr(w1,2,cols1.map(x=>x[0]),[...Array(14).fill(C.blue),C.amber,C.amber,C.amber,C.green,C.green,C.gray]);
+  band(w1,1,1,14,"FORMULARIO",C.blue);band(w1,1,15,17,"PDF",C.amber);band(w1,1,18,19,"JSON",C.green);band(w1,1,20,20,"",C.gray);band(w1,1,21,22,"DICCIONARIO INS",C.blue);
+  hdr(w1,2,cols1.map(x=>x[0]),[...Array(14).fill(C.blue),C.amber,C.amber,C.amber,C.green,C.green,C.gray,C.blue,C.blue]);
   let row=3;
   ST.S.forEach(s=>{
     const qs=ord.filter(q=>q.sid===s.id);
@@ -1413,7 +1708,7 @@ async function f2Excel(msgEl){
       const pdfOk=par||!inPdf?"No aplica":q.boxes.length?"Asignado":"Falta";
       const vals=[pid.get(q.id),s.title,par?"":(q.sub||""),q.parentId?"":k,(q.parentId?"   ↳ ":"")+q.label,parts.length?"Se arma con las partes":q.type,parts.length?"—":q.req?"Sí":"No",par?"":(q.origin||"La completa la persona"),q.repeat?`Sí (${q.rep})`:"No",
         parts.length?parts.map(p=>p.label).join(" + ")+(q.sep?` (separa «${q.sep}»)`:""):par?`Parte de ${pid.get(par.id)} ${par.label}`:"",
-        condText(q),q.opts.map(o=>o.label+(o.code?` = ${o.code}`:"")).join("\n"),q.rule||q.fmt||"",q.calc||q.maxLen||"",inPdf?"Sí":"No",(par?"":q.boxes.map(i=>{const ro=fbRoleOpts(q)?fbRoleOf(q,i):null;return rn.rows[i].nuevo+(ro?` (${fbRoleLabel(q,ro)})`:"")}).join("\n")),"",tplPath(q.json),"",q.notes||""];
+        condText(q),q.opts.map(o=>o.label+(o.code?` = ${o.code}`:"")).join("\n"),q.rule||q.fmt||"",q.calc||q.maxLen||"",inPdf?"Sí":"No",(par?"":q.boxes.map(i=>{const ro=fbRoleOpts(q)?fbRoleOf(q,i):null;return rn.rows[i].nuevo+(ro?` (${fbRoleLabel(q,ro)})`:"")}).join("\n")),"",tplPath(q.json),"",q.notes||"",...(()=>{if(par)return["",""];const ds=dicState(q);return[ds.d?tplPath(ds.d[4]):"",DIC_TXT[ds.st]]})()];
       vals.forEach((v,c)=>{const cell=w1.getCell(row,c+1);cell.value=v;cell.font=font(q.parentId?{color:{argb:C.gray}}:{});cell.border=BOX;cell.alignment={vertical:"top",wrapText:true};if(k%2===0&&!q.parentId)cell.fill=F("FFF7F8FA")});
       if(q.cond&&q.cond.qid){const cc=w1.getCell(row,11);cc.font=font({color:{argb:"FF5B2DB8"}})}
       stCell(w1.getCell(row,17),pdfOk);
@@ -1608,7 +1903,7 @@ const fromTplPath=p=>String(p||"").trim().replace(/\[i\]/gi,"[]");
 /* Sección/Subsección del machote más parecida a una sección propuesta desde el PDF */
 function f2MapMachote(){
   const secs=[...new Set(MACHOTE12.map(r=>r[0]))].filter(t=>t!==SYS_SEC);
-  ST.S.slice().forEach(s=>{if(s.hidden)return;
+  ST.S.slice().forEach(s=>{if(s.hidden||DIC.some(d=>d[2]===s.title))return;
     let best=null;secs.forEach(t=>{const sc=fbSim(fbToks(s.title),fbToks(t));if(sc>=0.5&&(!best||sc>best.sc))best={t,sc}});
     if(!best)return;
     const other=ST.S.find(x=>x!==s&&x.title===best.t);
@@ -1622,20 +1917,24 @@ function f2Infer(){
   if(rn.rows.length)n+=f2ProposeFromPdf();
   const key=q=>q.boxes.length?Math.min(...q.boxes):1e6;
   ST.Q.sort((a,b)=>key(a)-key(b));
+  n+=f2DicArrange();
   f2MapMachote();
   if(ST.paths.length){
     const owned=new Set(ST.Q.map(q=>q.json).filter(Boolean));
     ST.paths.forEach(p=>{if(owned.has(p.path))return;
       const q=f2FromPath(p,f2HiddenSid());q.sub=f2SysSub(p.path);q.inPdf=false;q.origin="Sistema (no se ve)";q.hiddenSrc="Viene del sistema";q.rule="Viene del sistema";n++});
   }
+  /* orden: oculto primero; después los pasos en el orden del diccionario; el resto como aparece en el PDF */
+  const dicPaso=t=>{const i=DIC.findIndex(d=>d[2]===t);return i<0?1e5:i};
+  ST.Q.sort((a,b)=>((a.dicI??1e4)-(b.dicI??1e4))||key(a)-key(b));
   const has=s=>ST.Q.some(q=>q.sid===s.id);
   const firstIdx=s=>{const i=ST.Q.findIndex(q=>q.sid===s.id);return i<0?1e9:i};
   ST.S=ST.S.filter(has);
-  ST.S.sort((a,b)=>((b.hidden?1:0)-(a.hidden?1:0))||firstIdx(a)-firstIdx(b));
+  ST.S.sort((a,b)=>((b.hidden?1:0)-(a.hidden?1:0))||(dicPaso(a.title)-dicPaso(b.title))||firstIdx(a)-firstIdx(b));
   if(!ST.S.length)f2ActiveSid();
   fbNorm();
-  /* subsecciones en el orden del machote */
-  const mi=(s,u)=>{const i=MACHOTE12.findIndex(r=>r[0]===s.title&&r[1]===u.title);return i<0?1e9:i};
+  /* subsecciones en el orden del diccionario y del machote */
+  const mi=(s,u)=>{const d=DIC.findIndex(x=>x[2]===s.title&&x[3]===u.title);if(d>=0)return d;const i=MACHOTE12.findIndex(r=>r[0]===s.title&&r[1]===u.title);return i<0?1e9:1e4+i};
   ST.S.forEach(s=>{const o=s.subs.slice();s.subs.sort((a,b)=>(mi(s,a)-mi(s,b))||(o.indexOf(a)-o.indexOf(b)))});
   return n;
 }
@@ -1661,11 +1960,9 @@ async function f2TplDownload(){
     return[secTitle(r.sid),fbRootSub(q),q.label,tplType(q),q.opts.map(o=>o.label+(o.code?"="+o.code:"")).join("; "),oc?"":(q.req?"Sí":"No"),oc?"Sí":pre,oc?"No":ed,condPlain(q),tplPath(q.json||""),q.split||(q.type==="Fecha"&&q.boxes.length===3?"día / mes / año":""),tplRule(q),"Sí",q.notes||"","Q"+q.id]});
   const pEnd=5+pRows.length+300,jEnd=4+Math.max(1,jRows.length);
   /* Listas: machote + secciones/subsecciones del proyecto (las de una misma sección, juntas) */
-  const lst=[];const addL=(a,b)=>{if(!lst.some(x=>x[0]===a&&x[1]===b))lst.push([a,b])};
-  const mSecs=[...new Set(MACHOTE12.map(r=>r[0]))];
-  mSecs.forEach(t=>{MACHOTE12.filter(r=>r[0]===t).forEach(r=>addL(r[0],r[1]));const s=ST.S.find(x=>x.title===t);if(s)s.subs.forEach(u=>addL(t,u.title))});
-  ST.S.forEach(s=>{if(!mSecs.includes(s.title))s.subs.forEach(u=>addL(s.title,u.title))});
-  const uniq=[...new Set(lst.map(x=>x[0]))];const lEnd=1+lst.length,dEnd=1+uniq.length;
+  const grp=new Map();const addL=(a,b)=>{if(!a||!b)return;if(!grp.has(a))grp.set(a,[]);const g=grp.get(a);if(!g.includes(b))g.push(b)};
+  MACHOTE12.forEach(r=>addL(r[0],r[1]));DIC.forEach(d=>addL(d[2],d[3]));ST.S.forEach(s=>s.subs.forEach(u=>addL(s.title,u.title)));
+  const lst=[...grp].flatMap(([a,bs])=>bs.map(b=>[a,b]));const uniq=[...grp.keys()];const lEnd=1+lst.length,dEnd=1+uniq.length;
   /* Hoja Preguntas */
   const wP=wb.addWorksheet("Preguntas",{views:[{state:"frozen",xSplit:3,ySplit:5,topLeftCell:"D6"}]});
   help(wP,PRE_HELP12);
