@@ -28,7 +28,7 @@ Una pregunta Fecha conectada a 3 casilleros reparte día / mes / año (por el su
 
 ## Diccionario General del INS
 
-La herramienta trae adentro el Diccionario General INS–Namirial (`docs/diccionario_v4.xlsx`, 184 campos): para cada dato, su nombre en el formulario web, sinónimos y nombre en el PDF, Paso, Sección, ruta JSON y si es visible u oculto. Con eso:
+La herramienta trae adentro el Diccionario General INS–Namirial (`docs/diccionario_v9.xlsx`, validado con el INS, 182 campos): para cada dato, su nombre en el formulario web, sinónimos y nombre en el PDF, Paso, Sección, ruta JSON y si es visible u oculto. Con eso:
 
 - **Paso 1**: cada dato del JSON dice si coincide con el diccionario (✓), si coincide salvo lista / objeto (≠) o si no está, y arriba se ve «N datos encontrados · M coinciden con el Diccionario INS».
 - **Paso 2**: al armar las preguntas desde el PDF y el JSON, lo que se reconoce en el diccionario (por su ruta en el JSON) va a su Paso / Sección, con el nombre web y la ruta; los campos que el diccionario marca como ocultos quedan como «Dato oculto». Cada pregunta muestra ✓ / ≠ Diccionario, y el editor tiene el bloque «Diccionario INS» con el botón «Usar la del diccionario». Al sugerir una ruta, primero se usa la del diccionario.
@@ -38,8 +38,8 @@ La plantilla de preguntas mantiene el formato v12 (las listas de Sección / Subs
 
 ### Cuando el INS mande una versión nueva del diccionario
 
-1. Guardala en `docs/` (por ejemplo `docs/diccionario_v5.xlsx`). Tiene que tener la hoja «Diccionario General» con las mismas columnas.
-2. Corré `node tools/build_dic.mjs docs/diccionario_v5.xlsx index.html` (solo necesita Node; no instala nada). Reemplaza la constante `DIC` de `index.html`.
+1. Guardala en `docs/` (por ejemplo `docs/diccionario_v10.xlsx`). Tiene que tener la hoja «Diccionario General» con las mismas columnas.
+2. Corré `node tools/build_dic.mjs docs/diccionario_v10.xlsx index.html` (solo necesita Node; no instala nada). Reemplaza la constante `DIC` que está entre los marcadores `/*DIC:start*/` y `/*DIC:end*/` de `index.html` y dice cuántos campos leyó.
 3. Abrí un PR con los dos archivos y mergealo.
 
 ## Privacidad
