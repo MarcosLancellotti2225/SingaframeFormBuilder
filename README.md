@@ -39,8 +39,17 @@ La plantilla de preguntas mantiene el formato v12 (las listas de Sección / Subs
 ### Cuando el INS mande una versión nueva del diccionario
 
 1. Guardala en `docs/` (por ejemplo `docs/diccionario_v10.xlsx`). Tiene que tener la hoja «Diccionario General» con las mismas columnas.
-2. Corré `node tools/build_dic.mjs docs/diccionario_v10.xlsx index.html` (solo necesita Node; no instala nada). Reemplaza la constante `DIC` que está entre los marcadores `/*DIC:start*/` y `/*DIC:end*/` de `index.html` y dice cuántos campos leyó.
-3. Abrí un PR con los dos archivos y mergealo.
+2. Corré `node tools/build_dic.mjs docs/diccionario_v10.xlsx` (solo necesita Node; no instala nada). Reemplaza la constante `DIC` que está entre los marcadores `/*DIC:start*/` y `/*DIC:end*/` de `index.html` y de `mapear.html`, y dice cuántos campos leyó.
+3. Abrí un PR con los archivos y mergealo.
+
+## Ordenar y mapear (paso opcional)
+
+`mapear.html` (link en el encabezado de la página principal). Cuando el INS manda su matriz (la ficha en Excel), cruza la ficha con el PDF y el JSON main, la contrasta con el Diccionario INS y arma una matriz normalizada. Solo lee los archivos: no cambia el PDF.
+
+- **Cruce**: cada campo de la ficha con su casillero del PDF (por el texto impreso junto al casillero, el nombre del casillero, los sinónimos del diccionario y el tipo). Estados: SEGURO, DUDOSO, SIN_MATCH (la ficha nombra un casillero que no está), SIN_PDF (solo web / JSON), SIN_FICHA (casillero sin fila), NO_APLICA (títulos). Cada decisión dice por qué.
+- **Resolver dudosos**: muestra la página del PDF con el casillero y los candidatos; un clic elige. Lo elegido queda como predeterminado de ese formulario en este navegador.
+- **Repeaters**: marca las listas (padecimientos[], intervencionQuirurgica[], direccion[], …) y cuántas filas tiene cada una en el PDF.
+- **Excel de salida**: hojas Matriz (ordenada por paso, sección y posición en el PDF), Huecos, Preguntas_INS (todas las filas de la ficha con su hoja y fila) y Resumen.
 
 ## Privacidad
 

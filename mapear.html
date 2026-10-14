@@ -1,0 +1,932 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Ordenar y mapear</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#f5f6f8; --paper:#ffffff; --ink:#1b1f2a; --muted:#5d6475; --line:#dde1e8; --soft:#eceff4;
+  --form:#3346c8; --form-bg:#e9ecfb; --pdf:#a35a00; --pdf-bg:#fbefdc; --json:#17784f; --json-bg:#e2f3ea;
+  --warn:#b4231d; --warn-bg:#fbe6e4; --ok:#17784f; --info:#5b2db8; --info-bg:#f1ebfc;
+  --sans:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12151c; --paper:#1a1e27; --ink:#e7e9ef; --muted:#9aa1b2; --line:#2c3240; --soft:#222733;
+  --form:#9aa8ff; --form-bg:#252c52; --pdf:#f0b25e; --pdf-bg:#3a2a12; --json:#6fd3a3; --json-bg:#13362a;
+  --warn:#ff8a80; --warn-bg:#3d1c1a; --ok:#6fd3a3; --info:#c4a8ff; --info-bg:#2b2440; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12151c; --paper:#1a1e27; --ink:#e7e9ef; --muted:#9aa1b2; --line:#2c3240; --soft:#222733;
+  --form:#9aa8ff; --form-bg:#252c52; --pdf:#f0b25e; --pdf-bg:#3a2a12; --json:#6fd3a3; --json-bg:#13362a;
+  --warn:#ff8a80; --warn-bg:#3d1c1a; --ok:#6fd3a3; --info:#c4a8ff; --info-bg:#2b2440; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.6 var(--sans);padding-inline:16px;padding-block:28px 64px;margin:0}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:28px}
+.wrap>*{min-width:0}
+h1{font-size:32px;line-height:1.15;margin:0 0 8px;font-weight:600;letter-spacing:-.01em}
+h2{font-size:20px;margin:0 0 6px;font-weight:600}
+.lead{color:var(--muted);max-width:72ch;font-size:16px;margin:0}
+.eyebrow{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.eyebrow a{color:inherit}
+.ver{font:500 11px var(--mono);background:var(--soft);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:16px}
+.inputs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.fin{display:grid;gap:6px;padding:12px;border:1px dashed var(--line);border-radius:8px;background:var(--bg)}
+.fin b{font-weight:600}
+.fin .hint{color:var(--muted);font-size:13px}
+.fin input{font:13px var(--sans);max-width:100%}
+.fin .st{font:12px var(--mono);color:var(--muted);min-height:1.4em;overflow-wrap:anywhere}
+.fin .st.ok{color:var(--ok)}.fin .st.bad{color:var(--warn)}
+button.btn{font:500 14px var(--sans);padding:8px 14px;border-radius:7px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer}
+button.btn:hover{border-color:var(--muted)}
+button.btn.pri{background:var(--form);border-color:var(--form);color:#fff}
+button.btn:disabled{opacity:.5;cursor:not-allowed}
+button.btn:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--form);outline-offset:1px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.msg{color:var(--muted);font-size:14px;margin:0}
+.stats{display:flex;flex-wrap:wrap;gap:8px}
+.stats span{background:var(--soft);border-radius:999px;padding:3px 10px;font-size:13px}
+.stats b{font-weight:600}
+.warns{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.warns li{font-size:13px;border-radius:6px;padding:6px 10px;background:var(--info-bg);color:var(--info)}
+.warns li.w{background:var(--pdf-bg);color:var(--pdf)}
+.warns li.e{background:var(--warn-bg);color:var(--warn)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:8px}
+.tabs button{font:500 14px var(--sans);border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:7px;padding:6px 12px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.tbox{max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{position:sticky;top:0;background:var(--soft);font:600 12px var(--sans);text-transform:uppercase;letter-spacing:.03em;color:var(--muted);z-index:1}
+td.mono,.mono{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
+.tag{display:inline-block;font:500 11px var(--mono);border-radius:4px;padding:0 5px;background:var(--soft);color:var(--muted)}
+.tag.tx{background:var(--form-bg);color:var(--form)}
+.tag.btn{background:var(--pdf-bg);color:var(--pdf)}
+.tag.arr{background:var(--json-bg);color:var(--json)}
+.tag.ph{background:var(--info-bg);color:var(--info)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.filters label{display:inline-flex;gap:6px;align-items:center}
+.filters input[type=search]{font:14px var(--sans);padding:6px 10px;border:1px solid var(--line);border-radius:7px;background:var(--paper);color:var(--ink);min-width:240px}
+.empty{padding:14px;color:var(--muted)}
+.tbox.dudbox{max-height:none;overflow:visible;border:0;background:none}
+.dud{display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:14px;align-items:start}
+.dud>*{min-width:0}
+.dud-list{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:78vh;overflow:auto}
+.dud-it{width:100%;text-align:left;font:13px/1.4 var(--sans);border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:8px;padding:8px 10px;cursor:pointer}
+.dud-it.on{border-color:var(--form);box-shadow:0 0 0 1px var(--form)}
+.dud-view{display:grid;gap:10px}
+.dud-head{display:grid;gap:6px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--paper)}
+.dud-btns{display:flex;flex-wrap:wrap;gap:6px}
+.dud-btns .btn{font-size:13px;padding:6px 10px}
+.dud-btns .btn.cur{border-color:var(--form);background:var(--form-bg)}
+button.btn.sm{padding:3px 10px;font-size:13px}
+.num{display:inline-grid;place-items:center;min-width:18px;height:18px;border-radius:9px;background:var(--pdf);color:#fff;font:600 11px var(--mono)}
+.dud-pdf{position:relative;max-height:78vh;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
+.dud-pdf canvas{display:block}
+.dud-ov{position:absolute;left:0;top:0}
+.ov{position:absolute;padding:0;margin:0;border:1px solid rgba(51,70,200,.25);background:rgba(51,70,200,.04);cursor:pointer;border-radius:2px}
+.ov:hover{background:rgba(51,70,200,.18)}
+.ov.cand{border:2px dashed #a35a00;background:rgba(240,178,94,.22)}
+.ov.cur{border:2px solid #3346c8;background:rgba(51,70,200,.25)}
+.ov .num{position:absolute;left:-10px;top:-10px}
+.lg{display:inline-block;width:14px;height:10px;vertical-align:middle;border-radius:2px;margin:0 2px 0 6px}
+.lg.cur{border:2px solid #3346c8;background:rgba(51,70,200,.25)}.lg.cand{border:2px dashed #a35a00;background:rgba(240,178,94,.22)}
+@media (max-width:760px){.dud{grid-template-columns:1fr}.dud-list{max-height:30vh}}
+.filters select{font:14px var(--sans);padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--paper);color:var(--ink)}
+.est{display:inline-block;font:600 11px var(--mono);border-radius:4px;padding:1px 6px;white-space:nowrap}
+.est.SEGURO{background:var(--json-bg);color:var(--json)}.est.DUDOSO{background:var(--pdf-bg);color:var(--pdf)}.est.SIN_MATCH{background:var(--warn-bg);color:var(--warn)}
+.est.SIN_PDF{background:var(--form-bg);color:var(--form)}.est.NO_APLICA{background:var(--soft);color:var(--muted)}
+.why{display:block;font-size:12px;color:var(--muted);min-width:28ch;max-width:46ch}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main class="wrap">
+<header>
+  <div class="eyebrow"><a href="./">Signaframe · Ficha de formulario</a> · paso opcional</div>
+  <h1>Ordenar y mapear <span class="ver" id="mp-ver"></span></h1>
+  <p class="lead">Cuando el INS manda su matriz (la ficha en Excel), este paso la cruza con el PDF y el JSON main, la contrasta con el Diccionario INS y arma una matriz normalizada con nuestro orden, más un reporte de lo que no cierra. Solo lee los archivos: no cambia el PDF. Todo se procesa en tu navegador.</p>
+</header>
+
+<section class="card" aria-labelledby="mp-in-h">
+  <h2 id="mp-in-h">Archivos</h2>
+  <div class="inputs">
+    <label class="fin"><b>PDF del formulario</b><span class="hint">Con los casilleros ya renombrados.</span><input type="file" id="mp-pdf" accept=".pdf,application/pdf"><span class="st" id="mp-pdf-st"></span></label>
+    <label class="fin"><b>JSON main</b><span class="hint">El JSON de ejemplo de salida / entrada.</span><input type="file" id="mp-json" accept=".json,application/json"><span class="st" id="mp-json-st"></span></label>
+    <label class="fin"><b>Ficha del INS (.xlsx)</b><span class="hint">La matriz armada por el INS.</span><input type="file" id="mp-xlsx" accept=".xlsx"><span class="st" id="mp-xlsx-st"></span></label>
+  </div>
+  <div class="bar" style="margin-top:12px"><button class="btn pri" id="mp-go" disabled>Procesar</button><p class="msg" id="mp-msg" aria-live="polite">Cargá los tres archivos.</p></div>
+</section>
+
+<section class="card" id="mp-out" hidden aria-labelledby="mp-out-h">
+  <div class="bar" style="justify-content:space-between"><h2 id="mp-out-h" style="margin:0">Lo que se leyó</h2><button class="btn pri" id="mp-dl">Bajar matriz normalizada (.xlsx)</button></div>
+  <div class="stats" id="mp-stats"></div>
+  <ul class="warns" id="mp-warns" style="margin-top:10px"></ul>
+  <div class="tabs" role="tablist" style="margin-top:14px">
+    <button role="tab" data-tab="mat" aria-selected="true">Matriz ordenada</button>
+    <button role="tab" data-tab="res" aria-selected="false">Resultado del cruce</button>
+    <button role="tab" data-tab="dud" aria-selected="false">Resolver dudosos</button>
+    <button role="tab" data-tab="hue" aria-selected="false">Huecos</button>
+    <button role="tab" data-tab="rep" aria-selected="false">Repeaters</button>
+    <button role="tab" data-tab="pdf" aria-selected="false">PDF</button>
+    <button role="tab" data-tab="json" aria-selected="false">JSON main</button>
+    <button role="tab" data-tab="ficha" aria-selected="false">Ficha del INS</button>
+    <button role="tab" data-tab="estr" aria-selected="false">Estructura base JSON</button>
+  </div>
+  <div class="filters"><input type="search" id="mp-q" placeholder="Buscar en la tabla…" aria-label="Buscar en la tabla"><select id="mp-est" aria-label="Filtrar por estado"><option value="">Todos los estados</option><option>SEGURO</option><option>DUDOSO</option><option>SIN_MATCH</option><option>SIN_PDF</option><option>SIN_FICHA</option><option>NO_APLICA</option></select><label class="msg"><input type="checkbox" id="mp-grp" checked> Agrupar opciones</label><span class="msg" id="mp-qn"></span></div>
+  <div class="tbox" id="mp-table"></div>
+</section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script>
+"use strict";
+const MP_VERSION="v1.5.0";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const slug=t=>String(t||"").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
+const MP={pdf:null,json:null,ficha:null,files:{}};
+/* Diccionario General INS (tools/build_dic.mjs lo regenera junto con index.html) */
+/*DIC:start*/
+/* Generado con tools/build_dic.mjs desde diccionario_v9.xlsx (182 campos). No editar a mano. */
+/* [nombre web, sinónimos y nombre en el PDF, paso, sección, ruta JSON, visible (1) u oculto (0)] */
+const DIC=[
+["Número de Póliza Madre",["Número de póliza"],"Datos Generales","Datos de la Póliza Madre","datosFormulario.datosGenerales.polizaMadre.numeroPoliza",1],
+["Vigencia desde",["Inicio de vigencia","Fecha de inicio"],"Datos Generales","Datos de la Póliza Madre","datosFormulario.datosGenerales.polizaMadre.vigenciaDesde",1],
+["Vigencia hasta",["Fin de vigencia","Fecha de vencimiento"],"Datos Generales","Datos de la Póliza Madre","datosFormulario.datosGenerales.polizaMadre.vigenciaHasta",1],
+["Seleccione la moneda de la póliza",["Moneda","Moneda de la póliza","Moneda: Colones"],"Datos Generales","Datos de la Póliza Madre","datosFormulario.datosGenerales.polizaMadre.codigoMoneda",1],
+["Tipo de identificación",["Tipo de identificación del tomador","Tipo de identificación: Jurídica Nacional"],"Datos Generales","Datos de la Póliza Madre","datosFormulario.datosGenerales.polizaMadre.codigoTipoIdentificacionTomador",1],
+["Cédula jurídica",["Identificación del tomador","No Identificación"],"Datos Generales","Datos de la Póliza Madre","datosFormulario.datosGenerales.polizaMadre.identificacionTomador",1],
+["Nombre o razón social",["Tomador","Nombre del tomador","Razón social"],"Datos Generales","Datos de la Póliza Madre","datosFormulario.datosGenerales.polizaMadre.nombreTomador",1],
+["Seleccione la forma de pago",["Forma de Pago: Mensual"],"Datos Generales","Datos de la Póliza Madre","datosFormulario.datosGenerales.polizaMadre.codigoFormaPago",1],
+["Código Intermediario",["Código del asesor","Código"],"Datos Generales","Datos del Asesor","datosFormulario.datosGenerales.intermediario.codigoIntermediario",1],
+["Identificación",["Identificación del intermediario","Identificación del asesor"],"Datos Generales","Datos del Asesor","datosFormulario.datosGenerales.intermediario.identificacion",1],
+["Código tipo de identificación",["Tipo de identificación del intermediario"],"Datos Generales","Datos del Asesor","datosFormulario.datosGenerales.intermediario.codigoTipoIdentificacion",1],
+["Nombre",["Nombre del intermediario","Nombre del asesor","Nombre completo intermediario"],"Datos Generales","Datos del Asesor","datosFormulario.datosGenerales.intermediario.nombre",1],
+["Correo electrónico",["Correo del intermediario","Correo del asesor"],"Datos Generales","Datos del Asesor","datosFormulario.datosGenerales.intermediario.correoElectronico",1],
+["Lugar",["Ciudad de emisión","Lugar de creación"],"Datos Generales","Información de la Solicitud","datosFormulario.datosGenerales.lugar",1],
+["Fecha",["Fecha de creación","Fecha: día/mes/año"],"Datos Generales","Información de la Solicitud","datosFormulario.datosGenerales.fechaCreacion",1],
+["¿Tiene otro seguro médico?",["¿Tiene otro seguro médico?","¿Esta solicitud va a sustituir otro seguro?"],"Datos Generales","Información adicional","datosFormulario.datosGenerales.datosAdicionales.indicadorSubstituyeSeguro",1],
+["¿Qué tipo de seguro tiene actualmente?",["Seguro del INS","Tipo de seguro actual"],"Datos Generales","Información adicional","datosFormulario.datosGenerales.datosAdicionales.indicadorSubstituyeSeguroINS",1],
+["Nombre de la aseguradora actual",["Nombre de la compañía","Nombre de la aseguradora actual"],"Datos Generales","Información adicional","datosFormulario.datosGenerales.datosAdicionales.nombreAseguradoraSubstituye",1],
+["Número de póliza actual",["N.º de póliza","Número de póliza actual"],"Datos Generales","Información adicional","datosFormulario.datosGenerales.datosAdicionales.numeroPolizaSubstituye",1],
+["Observaciones",["Observaciones","Comentarios"],"Datos Generales","Información adicional","datosFormulario.datosGenerales.datosAdicionales.observaciones",1],
+["Tipo de Formulario",["Código de formulario"],"Datos Generales","Datos del Sistema (oculto)","encabezado.codigoTipoFormulario",0],
+["Descripción Tipo Formulario",["Descripción del tipo de formulario","Nombre del formulario"],"Datos Generales","Datos del Sistema (oculto)","encabezado.descripcionTipoFormulario",0],
+["Tipo Trámite",["Tipo de trámite","Código de trámite"],"Datos Generales","Datos del Sistema (oculto)","encabezado.codigoTipoTramite",0],
+["Descripción Tipo Trámite",["Descripción del trámite","Nombre del trámite"],"Datos Generales","Datos del Sistema (oculto)","encabezado.descripcionTipoTramite",0],
+["Identificador Transacción Interno",["Identificador de transacción","Referencia INS"],"Datos Generales","Datos del Sistema (oculto)","encabezado.identificadorTransaccionInterno",0],
+["Correo electrónico",["Correo de envío","Email de envío"],"Datos Generales","Datos del Sistema (oculto)","encabezado.correoElectronico",0],
+["Código de Producto",["Producto","Código del producto"],"Datos Generales","Datos del Sistema (oculto)","encabezado.codigoProducto",0],
+["Descripción Producto",["Nombre del producto","Descripción del producto"],"Datos Generales","Datos del Sistema (oculto)","encabezado.descripcionProducto",0],
+["Nombre Completo Cliente",["Nombre del cliente","Cliente"],"Datos Generales","Datos del Sistema (oculto)","encabezado.nombreCompletoCliente",0],
+["Identificador Archivo",["ID Namirial","Identificador Namirial"],"Datos Generales","Datos del Sistema (oculto)","encabezado.identificadorArchivo",0],
+["Conozca a su cliente actualizado",["KYC actualizado","Conozca a su cliente"],"Datos Generales","Datos del Sistema (oculto)","encabezado.conozcaClienteActualizado",0],
+["Sede Administradora",["Código de sede","Sede"],"Datos Generales","Datos del Sistema (oculto)","encabezado.sedeAdministradora",0],
+["Descripción Sede Administradora",["Nombre de sede","Descripción de sede"],"Datos Generales","Datos del Sistema (oculto)","encabezado.descripcionSedeAdministradora",0],
+["Método de envío del formulario",["Medio de envío","Canal de envío"],"Datos Generales","Datos del Sistema (oculto)","encabezado.metodoEnvioFormulario",0],
+["Seleccione la forma de pago",["Forma de pago","Método de pago","Forma de Pago: Mensual"],"Datos Generales","Datos del Sistema (oculto)","datosFormulario.datosGenerales.polizaMadre.descripcionFormaPago",0],
+["Tipo de identificación",["Descripción del tipo de identificación del tomador","Tipo de identificación: Jurídica Nacional"],"Datos Generales","Datos del Sistema (oculto)","datosFormulario.datosGenerales.polizaMadre.descripcionTipoIdentificacionTomador",0],
+["Tipo de Persona",["Código de tipo de persona","Asegurado","Tomador","Beneficiario","Dependiente"],"Datos Generales","Datos del Sistema (oculto)","datosFormulario.personas[].codigoTipo",0],
+["Descripción Tipo de Persona",["Descripción de tipo de persona","Rol de persona"],"Datos Generales","Datos del Sistema (oculto)","datosFormulario.personas[].descripcionTipo",0],
+["Descripción Tipo de Identificación de Persona",["Descripción del tipo de identificación"],"Datos Generales","Datos del Sistema (oculto)","datosFormulario.personas[].descripcionTipoIdentificacion",0],
+["Descripción de estado civil",[],"Datos Generales","Datos del Sistema (oculto)","datosFormulario.personas[].descripcionEstadoCivil",0],
+["Descripción del género",["Descripción de género"],"Datos Generales","Datos del Sistema (oculto)","datosFormulario.personas[].descripcionGenero",0],
+["Método asistido",["Descripción del método asistido"],"Datos Generales","Datos del Sistema (oculto)","datosFormulario.personas[].riesgo[].embarazo[].descripcionMetodoAsistido",0],
+["Tipo de atención",["Descripción de atención"],"Datos Generales","Datos del Sistema (oculto)","datosFormulario.personas[].riesgo[].covid.descripcionTipoAtencion",0],
+["Descripción parentesco",[],"Datos Generales","Datos del Sistema (oculto)","datosFormulario.personas[].descripcionParentesco",0],
+["Tipo de Identificación Persona",["Tipo de indentificación","Tipo de Identificación"],"Datos del Asegurado / Datos del Tomador","Datos del Asegurado / Datos del Tomador","datosFormulario.personas[].codigoTipoIdentificacion",1],
+["Identificación de Persona",["No. de identificación","Número de Identificación"],"Datos del Asegurado / Datos del Tomador","Datos del Asegurado / Datos del Tomador","datosFormulario.personas[].numeroIdentificacion",1],
+["Correo electrónico",["Email","Correo electrónico de la persona"],"Datos del Asegurado / Datos del Tomador","Datos del Asegurado / Datos del Tomador","datosFormulario.personas[].correoElectronico",1],
+["Nombre Completo",["Nombre completo del asegurado","Nombre completo de la persona","Nombre completo"],"Datos del Asegurado / Datos del Tomador","Datos del Asegurado / Datos del Tomador","datosFormulario.personas[].nombreCompleto",1],
+["Primer Apellido",["Apellido 1"],"Datos del Asegurado / Datos del Tomador","Datos del Asegurado / Datos del Tomador","datosFormulario.personas[].primerApellido",1],
+["Segundo Apellido",["Apellido 2"],"Datos del Asegurado / Datos del Tomador","Datos del Asegurado / Datos del Tomador","datosFormulario.personas[].segundoApellido",1],
+["Primer Nombre",["Nombre 1"],"Datos del Asegurado / Datos del Tomador","Datos del Asegurado / Datos del Tomador","datosFormulario.personas[].primerNombre",1],
+["Segundo Nombre",["Nombre 2"],"Datos del Asegurado / Datos del Tomador","Datos del Asegurado / Datos del Tomador","datosFormulario.personas[].segundoNombre",1],
+["Fecha de Nacimiento",["Nacimiento","Fecha nacimiento"],"Datos del Asegurado / Datos del Tomador","Datos del Asegurado / Datos del Tomador","datosFormulario.personas[].fechaNacimiento",1],
+["Edad",["Edad calculada"],"Datos del Asegurado / Datos del Tomador","Datos del Asegurado / Datos del Tomador","datosFormulario.personas[].edad",1],
+["Estado civil",[],"Datos del Asegurado / Datos del Tomador","Datos del Asegurado / Datos del Tomador","datosFormulario.personas[].codigoEstadoCivil",1],
+["Sexo",["Sexo","Género masculino/femenino","Género"],"Datos del Asegurado / Datos del Tomador","Datos del Asegurado / Datos del Tomador","datosFormulario.personas[].codigoGenero",1],
+["Teléfono",["Teléfono móvil","Celular"],"Datos del Asegurado / Datos del Tomador","Datos del Asegurado / Datos del Tomador","datosFormulario.personas[].telefonoMovil",1],
+["Teléfono movil",["Teléfono móvil","Celular","Teléfono Celular"],"Datos del Asegurado / Datos del Tomador","Contacto y Ubicación","datosFormulario.personas[].direccion[].telefonoCelular",1],
+["Teléfono de la Oficina",["Teléfono Oficina","Oficina","Teléfono oficina Asegurado"],"Datos del Asegurado / Datos del Tomador","Contacto y Ubicación","datosFormulario.personas[].direccion[].telefonoOficina",1],
+["Teléfono del trabajo",["Teléfono Trabajo","Trabajo","Teléfono domicilio Asegurado"],"Datos del Asegurado / Datos del Tomador","Contacto y Ubicación","datosFormulario.personas[].direccion[].telefonoTrabajo",1],
+["País",["País de residencia"],"Datos del Asegurado / Datos del Tomador","Contacto y Ubicación","datosFormulario.personas[].direccion[].codigoPais",1],
+["Provincia",["Provincia de residencia"],"Datos del Asegurado / Datos del Tomador","Contacto y Ubicación","datosFormulario.personas[].direccion[].codigoProvincia",1],
+["Descripción Provincia",["Descripción de provincia","Nombre de provincia"],"Datos del Asegurado / Datos del Tomador","Contacto y Ubicación","datosFormulario.personas[].direccion[].descripcionProvincia",0],
+["Cantón",["Cantón de residencia"],"Datos del Asegurado / Datos del Tomador","Contacto y Ubicación","datosFormulario.personas[].direccion[].codigoCanton",1],
+["Descripción Cantón",["Descripción de cantón","Nombre de cantón"],"Datos del Asegurado / Datos del Tomador","Contacto y Ubicación","datosFormulario.personas[].direccion[].descripcionCanton",0],
+["Distrito",["Distrito de residencia"],"Datos del Asegurado / Datos del Tomador","Contacto y Ubicación","datosFormulario.personas[].direccion[].codigoDistrito",1],
+["Descripción Distrito",["Descripción de distrito","Nombre de distrito"],"Datos del Asegurado / Datos del Tomador","Contacto y Ubicación","datosFormulario.personas[].direccion[].descripcionDistrito",0],
+["Dirección exacta",["Dirección del domicilio","Dirección exacta del domicilio actual"],"Datos del Asegurado / Datos del Tomador","Contacto y Ubicación","datosFormulario.personas[].direccion[].direccionExacta",1],
+["Medio de notificación",["Canal de notificación","Medio por el cual desea ser notificado"],"Datos del Asegurado / Datos del Tomador","Preferencias de Notificación","datosFormulario.personas[].mediosNotificacion[].codigoMedioNotificacion",1],
+["Medio de notificación",["Nombre del medio","Descripción del medio"],"Datos del Asegurado / Datos del Tomador","Preferencias de Notificación","datosFormulario.personas[].mediosNotificacion[].medioNotificacion",1],
+["Datos de notificación",["Destino de notificación","Dato de notificación","Campos de texto para notificación"],"Datos del Asegurado / Datos del Tomador","Preferencias de Notificación","datosFormulario.personas[].mediosNotificacion[].datosNotificacion",1],
+["Nombre Completo Asegurado Directo",["Nombre completo del asegurado directo"],"Datos del Asegurado","Datos del Asegurado","datosFormulario.personas[].nombreCompletoAseguradoDirecto",1],
+["¿Cuál es su ingreso mensual bruto?",["Ingreso bruto mensual","Ingreso mensual","Ingreso Mensual Bruto"],"Datos del Asegurado","Datos del Asegurado","datosFormulario.personas[].ingresoMensualBruto",1],
+["¿Su residencia habitual y permanente será en Costa Rica?",["Residencia permanente en Costa Rica"],"Datos del Asegurado","Datos del Asegurado","datosFormulario.personas[].residiraEnCostaRica",1],
+["¿Cuál es su profesión u ocupación?",["Profesión","Ocupación","Profesión u Ocupación:"],"Datos del Asegurado","Datos del Asegurado","datosFormulario.personas[].profesionOcupacion",1],
+["¿Practica algún deporte o realiza alguna ocupación adicional?",["Actividad deportiva","Ocupación adicional","¿Practica algún deporte u ocupación adicional?"],"Datos del Asegurado","Datos del Asegurado","datosFormulario.personas[].indicadorPracticaDeporteORealizaOcupacionAdicional",1],
+["Tipo y frecuencia de práctica",["Detalle del deporte","Frecuencia de práctica","Tipo y frencuencia de práctica:","Indique el tipo de deporte u ocupación adicional y la frecuencia con que lo practica"],"Datos del Asegurado","Datos del Asegurado","datosFormulario.personas[].detalleDeporteOcupacionAdicional",1],
+["¿Cómo ha variado su peso en los últimos 6 meses?",["En los últimos 6 meses su peso ha"],"Datos del Asegurado","Datos del Asegurado","datosFormulario.personas[].codigoVariacionPesoUltimosSeisMeses",1],
+["¿Cuántos kilogramos aumentó o disminuyó su peso?",["¿Cuántos kilos?"],"Datos del Asegurado","Datos del Asegurado","datosFormulario.personas[].cantidadKilogramosVariacionPeso",1],
+["¿Cuál fue el motivo de la variación de peso?",["Motivo"],"Datos del Asegurado","Datos del Asegurado","datosFormulario.personas[].motivoVariacionPeso",1],
+["¿Desea agregar un dependiente menor de edad?",["Agregar dependiente menor"],"Dependientes","Dependientes","datosFormulario.personas[].indicadorAgregarDependienteMenor",1],
+["Peso",["Peso corporal","Kgs"],"Información del Riesgo","Antecedentes personales","datosFormulario.personas[].peso",1],
+["Estatura",["Altura","Mts"],"Información del Riesgo","Antecedentes personales","datosFormulario.personas[].estatura",1],
+["Cambio de peso",["Variación de peso","Cantidad de kilos","Variación en kilos","¿Cuántos kilos?","Motivo del cambio de peso","Motivo","Detalle de cambio","Detalle del cambio de salud","Detalle","En los últimos 6 meses su peso ha"],"Información del Riesgo","Antecedentes personales","datosFormulario.personas[].riesgo[].cambiosImportantesSalud[].detalle",1],
+["Cambio importante de salud",["Cambios importantes de salud","Variación de peso"],"Información del Riesgo","Antecedentes personales","datosFormulario.personas[].riesgo[].cambiosImportantesSalud[].indicador",1],
+["Nombre de quien padece",["Persona afectada","Quién padece"],"Información del Riesgo","Antecedentes personales","datosFormulario.personas[].riesgo[].cambiosImportantesSalud[].quienPadece",1],
+["¿Es o ha sido alcohólico?",["Antecedente de alcoholismo","¿Es usted o ha sido alcohólico?"],"Información del Riesgo","Alcohol","datosFormulario.personas[].riesgo[].bebidasAlcoholicas.indicadorAlcoholismo",1],
+["Detalles sobre el consumo o antecedentes de alcoholismo",["Detalle de alcoholismo","Patrón de consumo","Detalles:"],"Información del Riesgo","Alcohol","datosFormulario.personas[].riesgo[].bebidasAlcoholicas.detalleAlcoholismo",1],
+["Usa bebidas alcohólicas",["Consumo de alcohol","Bebidas alcohólicas","¿Consume bebidas alcohólicas?","¿Usa bebidas alcohólicas?"],"Información del Riesgo","Alcohol","datosFormulario.personas[].riesgo[].bebidasAlcoholicas.indicador",1],
+["Clase",["Tipo de bebida","Clase de bebida","a) Clase:","Tipo de bebida alcohólica"],"Información del Riesgo","Alcohol","datosFormulario.personas[].riesgo[].bebidasAlcoholicas.detalleTipo",1],
+["Cantidad",["Cantidad consumida","Unidades","c) Cantidad","Cantidad de bebidas alcohólicas consumidas"],"Información del Riesgo","Alcohol","datosFormulario.personas[].riesgo[].bebidasAlcoholicas.detalleCantidad",1],
+["Frecuencia",["Frecuencia de consumo","b) Frecuencia:","Frecuencia de consumo de bebidas alcohólicas"],"Información del Riesgo","Alcohol","datosFormulario.personas[].riesgo[].bebidasAlcoholicas.detalleFrecuencia",1],
+["Tiempo que lleva consumiendo bebidas alcohólicas",["¿Indique desde hace cuanto?"],"Información del Riesgo","Alcohol","datosFormulario.personas[].riesgo[].bebidasAlcoholicas.tiempoConsumoBebidasAlcoholicas",1],
+["¿Tiene alguna intervención quirúrgica pendiente?",["Cirugías pendientes","¿Intervenciones quirúrgicas pendientes?"],"Información del Riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].intervencionQuirurgica[].indicadorIntervencionQuirurgicaPendiente",1],
+["Intervenciones quirúrgicas realizadas",["Cirugías realizadas","Indicador de intervención","¿Intervenciones quirúrgicas realizadas?"],"Información del Riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].indicadorIntervencionQuirurgica",1],
+["Nombre de quien fue intervenido",["Persona intervenida","Paciente"],"Información del Riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].intervencionQuirurgica[].nombreQuienFueIntervenido",1],
+["Causa de la intervención",["Causa de cirugía","Motivo de intervención","En caso afirmativo detalle cuáles, motivo, fecha y estado actual"],"Información del Riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].intervencionQuirurgica[].declaracionCausas",1],
+["Fecha del procedimiento",["Fecha de cirugía","Fecha de intervención"],"Información del Riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].intervencionQuirurgica[].fechaProcedimiento",1],
+["Hospital del procedimiento",["Centro hospitalario","Hospital o clínica"],"Información del Riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].intervencionQuirurgica[].hospitalProcedimiento",1],
+["Nombre del cirujano",["Cirujano","Médico tratante"],"Información del Riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].intervencionQuirurgica[].nombreCirujano",1],
+["¿Se ha sometido a alguna intervención quirúrgica?",["¿Intervenciones quirúrgicas realizadas?"],"Información del Riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].intervencionQuirurgica[].indicador",1],
+["Detalles de las intervenciones quirúrgicas realizadas",["En caso afirmativo detalle cuáles, motivo, fecha y estado actual"],"Información del Riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].intervencionQuirurgica[].detalleIntervencionesQuirurgicasRealizadas",1],
+["Detalles de las intervenciones quirúrgicas pendientes",["En caso afirmativo detalle cuáles, motivo y su fecha de realización:"],"Información del Riesgo","Intervenciones Quirúrgicas","datosFormulario.personas[].riesgo[].intervencionQuirurgica[].detalleIntervencionesQuirurgicasPendientes",1],
+["Incapacidad por invalidez",["¿Está usted tramitando o tiene pensado tramitar en el corto plazo una incapacidad por invalidez?","¿Está tramitando o planea tramitar próximamente una incapacidad por invalidez?","¿Está tramitando una incapacidad por invalidez?"],"Información del Riesgo","Preguntas Adicionales","datosFormulario.personas[].riesgo[].indicadorTramitaIncapacidadInvalidez",1],
+["Complicaciones durante el embarazo",["Complicaciones del embarazo","¿Ha tenido alguna complicación?"],"Información del Riesgo","Preguntas Adicionales","datosFormulario.personas[].riesgo[].embarazo[].complicacionesEmbarazo",1],
+["Se encuentra embarazada",["Embarazo actual","Indicador de embarazo","¿Está embarazada actualmente?","¿Se encuentra actualmente embarazada?"],"Información del Riesgo","Preguntas Adicionales","datosFormulario.personas[].riesgo[].embarazo[].indicador",1],
+["Nombre de quien está embarazada",["Persona embarazada"],"Información del Riesgo","Preguntas Adicionales","datosFormulario.personas[].riesgo[].embarazo[].nombreQuienEstaEmbarazada",1],
+["Semanas de gestación",["Tiempo de embarazo","¿Cuánto tiempo tiene de embarazo?"],"Información del Riesgo","Preguntas Adicionales","datosFormulario.personas[].riesgo[].embarazo[].numeroSemanasGestacion",1],
+["Tipo de reproducción",["Método de reproducción","Reproducción natural o asistida"],"Información del Riesgo","Preguntas Adicionales","datosFormulario.personas[].riesgo[].embarazo[].codigoTipoReproduccion",1],
+["Condición de salud",["Condición de salud","Enfermedad","Padecimiento","¿Padece o ha padecido alguna condición?"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].condicionSalud.indicador",1],
+["Detalle de condición",["Detalle de condición","Detalle de salud","Nombre de la condición, enfermedad o traumatismo"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].condicionSalud.detalle",1],
+["Enfermedad de alto impacto",["Condición de alto impacto","Enfermedad grave"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedadAltoImpacto[].indicador",1],
+["Detalle",["Descripción","Detalle de condición","Detalle de enfermedad de alto impacto"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedadAltoImpacto[].detalle",1],
+["Nombre de quien padece",["Persona enferma","Paciente"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].nombreQuienPadece",1],
+["Categoría",["Tipo de padecimiento","Categoría","Categoría de la enfermedad"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].detalleCategoria",1],
+["Detalle de enfermedad",["Detalle de enfermedad","Padecimiento","Nombre de la condición, enfermedad o traumatismo"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].detalle",1],
+["Médico, clínica u hospital",["Médico","Clínica","Hospital","Nombre y dirección de médicos que le atendieron, clínica u hospital"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].nombreMedicoClinicaHospital",1],
+["Fecha de inicio",["Fecha de inicio","Inicio del padecimiento","Fecha de diagnóstico"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].fechaInicio",1],
+["Duración",["Tiempo de evolución","Antigüedad"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].duracion",1],
+["Resultado / estado actual",["Resultado","Evolución","Activa","Controlada","Resuelta","En estudio","Estado actual"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].resultado",1],
+["Tratamiento",["Indicador de tratamiento","Recibe tratamiento","Tratamiento recibido"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].indicadorTratamiento",1],
+["Nombre del medicamento",["Medicamento","Tratamiento farmacológico"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].nombreMedicamento",1],
+["Complicaciones",["Detalle de complicaciones"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].detalleComplicaciones",1],
+["Pruebas de azúcar",["Control de glucosa","Indicador de pruebas"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].indicadorPruebasAzucar",1],
+["Tipo de control",["Clase de prueba","Hemoglobina glicosilada"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].tipoControl",1],
+["Resultados de pruebas",["Resultados de azúcar","Valores de laboratorio"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].resultadosPruebas",1],
+["Presión arterial",["Control de presión","Indicador de presión arterial"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].indicadorPresionArterial",1],
+["Resultados de presión arterial",["Lecturas de presión","Valores de presión"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].resultadosPresionArterial",1],
+["Antígeno prostático",["PSA","Indicador de antígeno prostático"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].indicadorAntigenoProstatico",1],
+["Resultados de antígeno prostático",["Resultados PSA","Valores de antígeno"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].enfermedades[].resultadosAntigenoProstatico",1],
+["¿Padece o ha padecido alguna condición, enfermedad o traumatismo que haya requerido atención, tratamiento, estudios o seguimiento médico?",["¿Padece o ha padecido alguna condición, estado, enfermedad o traumatismo agudo o crónico por la cual ha recibido consulta, tratamiento médico, servicios, chequeos, hospitalizaciones, controles y/o medicamentos o se encuentran en estudio?"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].indicadorCondicionEnfermedadOTraumatismo",1],
+["Nombre de la condición, enfermedad o traumatismo",[],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].padecimientos[].nombreCondicionEnfermedadOTraumatismo",1],
+["Fecha de diagnóstico",[],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].padecimientos[].fechaDiagnostico",1],
+["Tratamientos recibidos",["Tratamiento(s) recibido(s)"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].padecimientos[].tratamientosRecibidos",1],
+["Estado actual de la condición, enfermedad o traumatismo",["Estado actual"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].padecimientos[].codigoEstadoActualCondicion",1],
+["Fecha de alta médica",["Si fue dado de alta ¿En qué fecha?"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].padecimientos[].fechaAltaMedica",1],
+["Nombre y dirección de los médicos, clínicas u hospitales que le atendieron",["Nombre y dirección de médicos que le atendieron, clínica u hospital"],"Información del Riesgo","Padecimientos","datosFormulario.personas[].riesgo[].padecimientos[].nombreMedicoClinicaHospital",1],
+["¿Consume o ha consumido drogas o sustancias psicoactivas?",["¿Consume o ha consumido alguna droga o sustancia psicoactiva?, Drogas","Sustancias psicoactivas","Medicamentos","¿Consume o ha consumido alguna droga o sustancia psicoactiva con fines recreativos o por indicación médica?"],"Información del Riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.indicadorUso",1],
+["Nombre de quien usa",["Persona que usa","Quién consume"],"Información del Riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.nombreQuienUsa",1],
+["Frecuencia",["Frecuencia de uso o consumo"],"Información del Riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.frecuencia",1],
+["Cantidad",["Cantidad de uso o consumo","Dosis"],"Información del Riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.cantidad",1],
+["Motivo",["Motivo de uso","Razón del tratamiento"],"Información del Riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.motivo",1],
+["Nombre",["Sustancia","Medicamento","Tratamiento","Nombre de la sustancia, medicamento o tratamiento"],"Información del Riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.nombre",1],
+["Detalles sobre el uso de drogas o sustancias psicoactivas",["En caso afirmativo, detalle: nombre de la sustancia, motivo de uso, frecuencia, cantidad y fecha del último consumo."],"Información del Riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.detalleUso",1],
+["¿Utiliza medicamentos o tratamientos médicos actualmente, o ha recibido medicina nuclear, isótopos radioactivos o quimioterapia?",["Uso actual de medicamentos","Tratamiento médico actual","¿Utiliza actualmente algún medicamento o tratamiento médico, o ha recibido medicina nuclear, isótopos radioactivos o quimioterapia?"],"Información del Riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.indicadorUsoMedicamentos",1],
+["Detalles de medicamentos o tratamientos médicos",["En caso afirmativo, indique: nombre del medicamento o tratamiento, motivo de uso, frecuencia, fecha de inicio y dosis."],"Información del Riesgo","Drogas / Medicamentos","datosFormulario.personas[].riesgo[].drogaMedicamento.detalleUsoMedicamentos",1],
+["Alguna vez ha fumado",["Fumador","Tabaquismo","¿Ha fumado alguna vez?","¿Alguna vez ha fumado?"],"Información del Riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.indicadorFumador",1],
+["Cantidad fumada diaria",["Consumo diario","Cantididad diaria de cigarrillo, puro o ml:","Cantidad diaria de cigarrillos, puros o líquido de vapeo","Cantidad diaria de cigarrillo, puro o ml"],"Información del Riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.cantidadFumadoDiario",1],
+["Hace cuánto tiempo fuma",["Tiempo fumando","Antigüedad de fumado","¿Hace cuánto tiempo?","Tiempo que lleva fumando o vapeando","¿Hace cuánto tiempo fuma?"],"Información del Riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.haceCuantoTiempoFuma",1],
+["Vapea actualmente",["Vapeo actual","Usa vaporizador","¿Vapea actualmente?"],"Información del Riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.indicadorVapea",1],
+["Cantidad de vapeo diario",["Cantidad de vapeo diario","ml diarios","Cantidad diaria de vapeo"],"Información del Riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.cantidadVapeoDiario",1],
+["Hace cuánto tiempo vapea",["Tiempo vapeando","Antigüedad de vapeo","¿Hace cuánto tiempo vapea?"],"Información del Riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.haceCuantoTiempoVapea",1],
+["Dejó de fumar",["Exfumador","¿Dejó de consumir?"],"Información del Riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.indicadorDejoDeFumar",1],
+["Hace cuánto dejó de fumar",["Tiempo desde que dejó de fumar","¿Hace cuánto?","Tiempo transcurrido desde que dejó de fumar o vapear","¿Hace cuánto dejó de fumar?"],"Información del Riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.haceCuantoTiempoDejoDeFumar",1],
+["¿Fuma actualmente?",["Fumador actual"],"Información del Riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.indicadorFumaActualmente",1],
+["¿Dejó de vapear?",["Exvapeador"],"Información del Riesgo","Fumado","datosFormulario.personas[].riesgo[].tabaquismo.indicadorDejoVapear",1],
+["Consulta médica",["Indicador de consulta médica","Recibió consulta"],"Información del Riesgo","Consultas Médicas","datosFormulario.personas[].riesgo[].indicadorConsultaMedica",1],
+["Quién consulta",["Persona que consulta","Paciente"],"Información del Riesgo","Consultas Médicas","datosFormulario.personas[].riesgo[].consultaMedica[].quienConsulta",1],
+["Motivo de consulta",["Detalle del motivo","Razón de consulta"],"Información del Riesgo","Consultas Médicas","datosFormulario.personas[].riesgo[].consultaMedica[].detalleMotivo",1],
+["Diagnóstico médico",["Diagnóstico de consulta"],"Información del Riesgo","Consultas Médicas","datosFormulario.personas[].riesgo[].consultaMedica[].diagnosticoMedico",1],
+["Nombre del médico tratante",["Médico","Profesional tratante"],"Información del Riesgo","Consultas Médicas","datosFormulario.personas[].riesgo[].consultaMedica[].nombreMedicoTratante",1],
+["Diagnóstico especial",["Indicador de diagnóstico especial","Examen especial"],"Información del Riesgo","Diagnósticos Especiales","datosFormulario.personas[].riesgo[].indicadorDiagnosticoEspecial",1],
+["Quién consulta",["Persona evaluada","Paciente"],"Información del Riesgo","Diagnósticos Especiales","datosFormulario.personas[].riesgo[].diagnosticoEspecial[].quienConsulta",1],
+["Motivo",["Motivo del diagnóstico o examen"],"Información del Riesgo","Diagnósticos Especiales","datosFormulario.personas[].riesgo[].diagnosticoEspecial[].motivo",1],
+["Resultado",["Resultado del examen","Hallazgos"],"Información del Riesgo","Diagnósticos Especiales","datosFormulario.personas[].riesgo[].diagnosticoEspecial[].resultado",1],
+["Nombre del médico tratante",["Médico","Profesional tratante"],"Información del Riesgo","Diagnósticos Especiales","datosFormulario.personas[].riesgo[].diagnosticoEspecial[].nombreMedicoTratante",1],
+["Diagnóstico COVID-19",["COVID","SARS-CoV-2","Resultado positivo","¿Ha sido diagnosticado con COVID-19?"],"Información del Riesgo","COVID","datosFormulario.personas[].riesgo[].covid.indicadorPositivo",1],
+["Fecha de diagnóstico",["Fecha de diagnóstico COVID"],"Información del Riesgo","COVID","datosFormulario.personas[].riesgo[].covid.fechaDiagnostico",1],
+["Fecha de alta",["Alta COVID","Fecha de recuperación"],"Información del Riesgo","COVID","datosFormulario.personas[].riesgo[].covid.fechaAlta",1],
+["Requirió hospitalización",["Hospitalización por COVID","¿Requirió hospitalización?"],"Información del Riesgo","COVID","datosFormulario.personas[].riesgo[].covid.indicadorHospitalizacion",1],
+["Centro hospitalario",["Hospital","Clínica de atención"],"Información del Riesgo","COVID","datosFormulario.personas[].riesgo[].covid.centroHospitalario",1],
+["Síntomas o secuelas",["Detalle de síntomas","Secuelas COVID"],"Información del Riesgo","COVID","datosFormulario.personas[].riesgo[].covid.detalleSintomasSecuelas",1],
+["Vacunación completa SARS-CoV-2",["Vacunación completa COVID","¿Tiene vacunación completa contra SARS-CoV-2?"],"Información del Riesgo","COVID","datosFormulario.personas[].riesgo[].covid.indicadorVacunacionCompletaSarsCov2",1],
+["Fecha de última dosis SARS-CoV-2",["Última dosis COVID","Fecha de vacunación","Fecha de última dosis"],"Información del Riesgo","COVID","datosFormulario.personas[].riesgo[].covid.fechaUltimaDosisSarsCov2",1],
+["Detalle otro beneficiario",["Otro parentesco"],"Beneficiarios","Beneficiarios","datosFormulario.personas[].detalleOtroBeneficiario",1],
+["Interés asegurable",["Relación con el beneficiario","Interés asegurable o la relación existente con el otro beneficiario"],"Beneficiarios","Beneficiarios","datosFormulario.personas[].interesAsegurableOtroBeneficiario",1],
+["¿Desea agregar beneficiarios?",["Agregar beneficiario"],"Beneficiarios","Beneficiarios","datosFormulario.personas[].indicadorAgregarBeneficiario",1],
+["Parentesco",[],"Beneficiarios","Beneficiarios","datosFormulario.personas[].codigoParentesco",1],
+["Porcentaje",[],"Beneficiarios","Beneficiarios","datosFormulario.personas[].porcentaje",1],
+["Autorización",["Consentimiento del cliente","Autorización para revisar expedientes","Adicionalmente, autorizo la revisión de los expedientes de los solicitantes o los asegurados suscrito en este formulario cuando tenga la condición de menor de edad.","Adicionalmente, autorizo la revisión de los expedientes..."],"Declaraciones y Autorización","Autorizaciones","datosFormulario.datosGenerales.indicadorClienteDaConsentimiento",1],
+["Consentimiento",["Consentimiento de la persona"],"Declaraciones y Autorización","Autorizaciones","datosFormulario.personas[].indicadorClienteDaConsentimiento",1],
+["Acepta términos",["Aceptación de términos","He leído y comprendo el texto anterior, y declaro que la información es verídica y acepto las condiciones y autorizaciones descritas. ¿Acepta usted estos términos?","He leído y comprendo el texto anterior... ¿Acepta usted estos términos?"],"Declaraciones y Autorización","Declaraciones Legales","datosFormulario.datosGenerales.indicadorAceptaTerminos",1]
+];
+/*DIC:end*/
+$("#mp-ver").textContent=MP_VERSION;
+
+/* ════════ PDF: recorrido crudo de /AcroForm/Fields (pdf-lib de alto nivel falla con campos jerárquicos) ════════ */
+async function mpReadPdf(bytes){
+  const {PDFDocument,PDFName,PDFDict,PDFArray,PDFRef,PDFNumber}=PDFLib;
+  const doc=await PDFDocument.load(bytes,{ignoreEncryption:true,updateMetadata:false});
+  const ctx=doc.context;const L=o=>o instanceof PDFRef?ctx.lookup(o):o;const N=n=>PDFName.of(n);
+  const txt=o=>{o=L(o);if(o==null)return"";if(typeof o.decodeText==="function")return o.decodeText();return String(o)};
+  const nm=o=>{o=L(o);if(!o)return"";return typeof o.decodeText==="function"?o.decodeText():String(o).replace(/^\//,"")};
+  const pages=doc.getPages();const refPage=new Map();
+  pages.forEach((p,i)=>{const an=L(p.node.get(N("Annots")));if(an instanceof PDFArray)an.asArray().forEach(r=>{if(r instanceof PDFRef)refPage.set(r.toString(),i+1)})});
+  const pageOfRef=new Map(pages.map((p,i)=>[p.ref.toString(),i+1]));
+  const acro=L(doc.catalog.get(N("AcroForm")));
+  const out=[],warns=[];
+  if(!(acro instanceof PDFDict)){warns.push({k:"e",t:"El PDF no tiene formulario (AcroForm)."});return{fields:out,pages:pages.length,warns}}
+  const widget=(ref,d)=>{
+    const r=L(d.get(N("Rect")));const rect=r instanceof PDFArray?r.asArray().map(x=>L(x).asNumber()):null;
+    let page=ref instanceof PDFRef?refPage.get(ref.toString()):null;
+    if(!page){const p=d.get(N("P"));if(p instanceof PDFRef)page=pageOfRef.get(p.toString())}
+    const ap=L(d.get(N("AP")));let states=[];
+    if(ap instanceof PDFDict){const n=L(ap.get(N("N")));if(n instanceof PDFDict)states=n.keys().map(k=>nm(k)).filter(s=>s!=="Off")}
+    return{page:page||null,rect,states};
+  };
+  const visit=(ref,parent,depth)=>{
+    const d=L(ref);if(!(d instanceof PDFDict)||depth>40)return;
+    const t=d.get(N("T"));const part=t?txt(t):"";
+    const me={name:part?(parent.name?parent.name+"."+part:part):parent.name,
+      ft:d.get(N("FT"))?nm(d.get(N("FT"))):parent.ft,
+      ff:d.get(N("Ff"))?L(d.get(N("Ff"))).asNumber():parent.ff,
+      opt:d.get(N("Opt"))?L(d.get(N("Opt"))):parent.opt,
+      tu:d.get(N("TU"))?txt(d.get(N("TU"))):parent.tu};
+    const kids=L(d.get(N("Kids")));
+    if(kids instanceof PDFArray){
+      const ks=kids.asArray();
+      if(ks.some(k=>{const kd=L(k);return kd instanceof PDFDict&&kd.has(N("T"))})){ks.forEach(k=>visit(k,me,depth+1));return}
+      out.push(field(me,ks.map(k=>widget(k,L(k)))));return;
+    }
+    out.push(field(me,[widget(ref,d)]));
+  };
+  const field=(f,ws)=>{
+    const ff=f.ff||0;const tipo=f.ft==="Btn"?(ff&(1<<15)?"radio":ff&(1<<16)?"boton":"casilla"):f.ft==="Tx"?"texto":f.ft==="Ch"?"lista":f.ft==="Sig"?"firma":(f.ft||"?");
+    let opts=[];if(f.opt instanceof PDFLib.PDFArray)opts=f.opt.asArray().map(o=>{o=L(o);return o instanceof PDFLib.PDFArray?txt(o.get(1)||o.get(0)):txt(o)});
+    const states=[...new Set(ws.flatMap(w=>w.states))];
+    return{name:f.name,ft:f.ft||"?",tipo,label:f.tu||"",widgets:ws,page:ws[0]&&ws[0].page,rect:ws[0]&&ws[0].rect,states,opts};
+  };
+  const fields=L(acro.get(N("Fields")));
+  if(fields instanceof PDFArray)fields.asArray().forEach(r=>visit(r,{name:"",ft:"",ff:0,opt:null,tu:""},0));
+  if(!out.length)warns.push({k:"e",t:"El formulario del PDF no tiene campos."});
+  return{fields:out,pages:pages.length,warns};
+}
+
+/* ════════ JSON main: rutas aplanadas con tipo; arrays = repeaters ════════ */
+function mpReadJson(text){
+  const o=JSON.parse(text);const paths=[],arrays=[],warns=[];
+  const type=v=>v===null?"null":Array.isArray(v)?"array":typeof v;
+  const walk=(v,p,inArr)=>{
+    if(Array.isArray(v)){arrays.push({path:p,len:v.length});paths.push({path:p,type:"array",len:v.length,repeater:true,inArr});v.forEach((el,i)=>walk(el,`${p}[${i}]`,p));return}
+    if(v&&typeof v==="object"){const ks=Object.keys(v);if(!ks.length)paths.push({path:p,type:"object",ex:"{}",inArr});ks.forEach(k=>walk(v[k],p?p+"."+k:k,inArr));return}
+    paths.push({path:p,type:type(v),ex:v,inArr,placeholder:typeof v==="string"&&/^<[^<>]+>$/.test(v.trim())});
+  };
+  walk(o,"",null);
+  if(o&&o.datosFormulario&&o.datosFormulario.datosGenerales)warns.push({k:"w",t:"El JSON trae datosFormulario.datosGenerales (no es la convención v8 sin datosGenerales). Se toma como advertencia, no como error."});
+  return{data:o,paths,arrays,warns};
+}
+
+/* ════════ Ficha del INS: todas las hojas a una tabla, con hoja y fila de origen ════════ */
+const FICHA_COLS={pasos_formulario:"paso",seccion:"seccion",nombre_en_pdf:"nombrePdf",nombre_del_campo_en_formulario:"nombreWeb",tipo_de_control_web:"controlWeb",valores_mostrados_web:"valoresWeb",tipo_de_dato_json:"tipoJson",mapeo_web_json:"mapeo",regla:"regla",obligatorio_web:"oblWeb",obligatorio_json:"oblJson",formulario_a_visualizar:"formulario",visualizacion_en_formularios:"visualizacion",observaciones:"observaciones",nombre_de_la_seccion_del_json:"seccionJson",nombre_del_campo_en_el_json:"campoJson",nombre_interno_del_campo_en_pdf:"nombreInternoPdf"};
+async function mpReadFicha(buf){
+  const wb=new ExcelJS.Workbook();await wb.xlsx.load(buf);
+  const rows=[],sheets=[],estructura=[],warns=[];
+  const ct=c=>{const v=c.value;if(v==null)return"";if(typeof v==="object"){if(v.richText)return v.richText.map(x=>x.text).join("").trim();if("result" in v)return String(v.result??"").trim();if(v.text)return String(v.text).trim();if(v instanceof Date)return v.toISOString().slice(0,10)}return String(v).trim()};
+  wb.eachSheet(ws=>{
+    if(slug(ws.name)==="estructura_base_json"){
+      ws.eachRow((row,r)=>{if(r===1)return;const nodo=ct(row.getCell(1));if(!nodo)return;estructura.push({nodo,paso:ct(row.getCell(2)),seccion:ct(row.getCell(3)),fila:r})});
+      sheets.push({name:ws.name,rows:0,indice:true});return;
+    }
+    let hr=0,hc=0;
+    for(let r=1;r<=25&&!hr;r++){const row=ws.getRow(r);for(let c=1;c<=Math.max(30,ws.columnCount);c++){if(slug(ct(row.getCell(c)))==="pasos_formulario"){hr=r;hc=c;break}}}
+    if(!hr){warns.push({k:"w",t:`Hoja «${ws.name}»: no encontré la fila de encabezado («Pasos Formulario»). No se leyó.`});sheets.push({name:ws.name,rows:0,noHeader:true});return}
+    const map={};const head=ws.getRow(hr);
+    for(let c=1;c<=Math.max(30,ws.columnCount);c++){const k=FICHA_COLS[slug(ct(head.getCell(c)))];if(k&&!(k in map))map[k]=c}
+    const missing=Object.values(FICHA_COLS).filter(k=>!(k in map));
+    if(missing.length)warns.push({k:"w",t:`Hoja «${ws.name}»: faltan columnas: ${missing.join(", ")}.`});
+    if(hc!==1)warns.push({k:"i",t:`Hoja «${ws.name}»: el encabezado está corrido (empieza en la columna ${String.fromCharCode(64+hc)}); se leyó por nombre de columna.`});
+    let n=0;
+    for(let r=hr+1;r<=ws.rowCount;r++){
+      const row=ws.getRow(r);const rec={hoja:ws.name,fila:r};let any=false;
+      for(const[k,c]of Object.entries(map)){const v=ct(row.getCell(c));rec[k]=v;if(v)any=true}
+      if(!any)continue;
+      rec.placeholders=Object.values(rec).filter(v=>typeof v==="string"&&/<[^<>]+>/.test(v)).length;
+      rows.push(rec);n++;
+    }
+    sheets.push({name:ws.name,rows:n,headerRow:hr,headerCol:hc});
+  });
+  const na=v=>/^no aplica$/i.test(v||"");
+  rows.forEach(r=>{r.sinPdf=na(r.nombreInternoPdf)||na(r.nombrePdf)});
+  const vacios=rows.filter(r=>!r.nombreInternoPdf).length,noAp=rows.filter(r=>na(r.nombreInternoPdf)).length;
+  if(rows.length&&vacios)warns.push({k:"i",t:`«Nombre interno del campo en PDF» viene vacío en ${vacios} de ${rows.length} filas${noAp?` y dice «No aplica» en ${noAp}`:""}: el vínculo ficha ↔ casillero se arma en el cruce.`});
+  if(!estructura.length)warns.push({k:"w",t:"No encontré la hoja «Estructura base JSON» (índice de pasos y secciones)."});
+  return{rows,sheets,estructura,warns};
+}
+
+/* ════════ Texto impreso del PDF (pdf.js) y contexto de cada casillero ════════ */
+async function mpPdfText(bytes){
+  if(!window.pdfjsLib)return{items:[],doc:null};
+  pdfjsLib.GlobalWorkerOptions.workerSrc="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  const doc=await pdfjsLib.getDocument({data:bytes.slice()}).promise;const items=[];
+  for(let p=1;p<=doc.numPages;p++){const tc=await(await doc.getPage(p)).getTextContent();
+    tc.items.forEach(it=>{const s=(it.str||"").trim();if(!s)return;items.push({page:p,str:s,x:it.transform[4],y:it.transform[5],w:it.width,h:Math.abs(it.transform[3])||it.height||8})})}
+  return{items,doc};
+}
+/* texto a la izquierda en la misma línea, arriba, y a la derecha (rótulo de la opción) */
+function mpCtx(items,page,rect){
+  if(!rect)return{left:"",above:"",right:""};
+  const [x0,y0,x1,y1]=[Math.min(rect[0],rect[2]),Math.min(rect[1],rect[3]),Math.max(rect[0],rect[2]),Math.max(rect[1],rect[3])];
+  const ym=(y0+y1)/2,hh=Math.max(6,(y1-y0)/2+3);
+  const pg=items.filter(i=>i.page===page);
+  const same=pg.filter(i=>Math.abs(i.y+i.h/2-ym)<=hh);
+  const left=same.filter(i=>i.x+i.w<=x0+3&&i.x+i.w>=x0-260).sort((a,b)=>a.x-b.x);
+  /* del bloque de la izquierda, solo lo contiguo al casillero (corta en el último hueco grande) */
+  let lt=[];for(let k=left.length-1;k>=0;k--){const it=left[k];const nx=lt.length?lt[0].x:x0;if(nx-(it.x+it.w)>40&&lt.length)break;lt.unshift(it)}
+  const right=same.filter(i=>i.x>=x1-1&&i.x<=x1+70).sort((a,b)=>a.x-b.x).slice(0,2);
+  const above=pg.filter(i=>i.y>=y1-1&&i.y<=y1+18&&i.x<x1+10&&i.x+i.w>x0-10).sort((a,b)=>a.y-b.y||a.x-b.x);
+  const txt=a=>a.map(i=>i.str).join(" ").replace(/\s+/g," ").trim();
+  return{left:txt(lt),above:txt(above),right:txt(right)};
+}
+
+/* ════════ v1.1 · Agrupar: casillas del PDF en grupos de opciones; filas-por-opción de la ficha en un campo ════════ */
+const OPT_LABEL={si:"Sí",no:"No"};
+function mpGroupPdf(fields){
+  const btn=fields.filter(f=>f.ft==="Btn"&&f.tipo!=="boton");
+  const pre=n=>{const parts=n.split("_");const out=[];for(let i=1;i<parts.length;i++)out.push(parts.slice(0,i).join("_"));return out.reverse()};
+  /* base de cada casilla = el prefijo más largo (cortando en «_») que comparte con al menos otra casilla */
+  const base=new Map();btn.forEach(f=>{const b=pre(f.name).find(p=>btn.filter(g=>g.name.startsWith(p+"_")).length>=2);if(b)base.set(f.name,b)});
+  const groups=new Map();
+  fields.forEach(f=>{const b=base.get(f.name);if(!b)return;if(!groups.has(b))groups.set(b,[]);groups.get(b).push(f)});
+  const out=[],done=new Set();
+  fields.forEach(f=>{
+    const b=base.get(f.name);
+    if(!b){out.push({name:f.name,ft:f.ft,tipo:f.tipo,page:f.page,rect:f.rect,label:f.label,miembros:[f.name],opciones:f.opts.map(o=>({pdfValue:o,widget:f.name})),agrupado:false});return}
+    if(done.has(b))return;done.add(b);
+    const ms=groups.get(b);const sfx=ms.map(m=>m.name.slice(b.length+1));
+    const top=ms.reduce((a,m)=>(!a||(m.page<a.page)||(m.page===a.page&&m.rect&&a.rect&&m.rect[3]>a.rect[3]))?m:a,null);
+    out.push({name:b,ft:"Btn",tipo:sfx.every(x=>x in OPT_LABEL)?"radio sí/no":"radio",page:top.page,rect:top.rect,label:ms.map(m=>m.label).find(Boolean)||"",
+      miembros:ms.map(m=>m.name),opciones:ms.map((m,i)=>({pdfValue:sfx[i],label:OPT_LABEL[sfx[i]]||sfx[i].replace(/_/g," "),widget:m.name,estado:m.states[0]||""})),agrupado:true});
+  });
+  return out;
+}
+/* valor JSON de cada opción según «Mapeo WEB → JSON» (WEB: Sí → JSON: true; … / «Enviar código 01») */
+function mpOptJson(mapeo,label){
+  const m=String(mapeo||"");const L=slug(label);
+  for(const x of m.matchAll(/WEB:\s*([^→;]+?)\s*→\s*JSON:\s*([^;]+)/gi))if(slug(x[1])===L)return x[2].trim();
+  const c=m.match(/c[oó]digo\s+([A-Za-z0-9]+)/i);return c?c[1]:"";
+}
+function mpGroupFicha(rows){
+  const out=[];const idx=new Map();
+  rows.forEach(r=>{
+    const k=r.campoJson?`${r.hoja}|${r.campoJson}|${slug(r.nombreWeb)}`:null;
+    const opt=r.valoresWeb&&/combo|radio/i.test(r.controlWeb||"")?{label:r.valoresWeb,jsonValue:mpOptJson(r.mapeo,r.valoresWeb),fila:r.fila}:null;
+    if(k&&idx.has(k)){const g=idx.get(k);g.filas.push(r.fila);if(opt)g.opciones.push(opt);return}
+    const g=Object.assign({},r,{filas:[r.fila],opciones:opt?[opt]:[]});delete g.fila;
+    out.push(g);if(k)idx.set(k,g);
+  });
+  out.forEach(g=>{g.agrupado=g.filas.length>1});
+  return out;
+}
+
+/* ════════ v1.2 · Cruce: ficha ↔ casilleros del PDF ↔ JSON ↔ Diccionario, con puntaje y señal explicable ════════ */
+/* repeaters del PDF: base_N_campo con N=1..k se junta en una sola unidad (base_[n]_campo) */
+function mpCollapseRep(units){
+  const re=/^(.+?)_(\d+)_(.+)$/;const key=new Map();
+  units.forEach(u=>{const m=u.name.match(re);if(!m||u.agrupado)return;const k=m[1]+"|"+m[3];if(!key.has(k))key.set(k,[]);key.get(k).push({u,n:+m[2]})});
+  const rep=new Map();key.forEach((a,k)=>{if(a.length>=2)a.forEach(x=>rep.set(x.u,{k,n:x.n}))});
+  const out=[],done=new Set();
+  units.forEach(u=>{const r=rep.get(u);if(!r){out.push(u);return}if(done.has(r.k))return;done.add(r.k);
+    const ms=key.get(r.k).sort((a,b)=>a.n-b.n);const[b,c]=r.k.split("|");const f=ms[0].u;
+    out.push(Object.assign({},f,{name:`${b}_[n]_${c}`,miembros:ms.flatMap(x=>x.u.miembros),repeater:{base:b,campo:c,filas:ms.map(x=>x.n)},ctx:f.ctx,optTxt:f.optTxt}))});
+  return out;
+}
+const MP_STOP=new Set("de la el los las en o y a e u su sus usted ud ha han he que del al lo se es un una por con para le les si sí no fue alguna algun alguno algunos cual cuales mi me actualmente asg n caso indique detalle detalles favor".split(" "));
+const mpTok=t=>[...new Set(slug(t).split("_").filter(w=>w&&!MP_STOP.has(w)&&!/^\d+$/.test(w)).map(w=>w.length>5?w.slice(0,5):w))];
+const mpCont=(a,b)=>{if(!a.length)return 0;const B=new Set(b);return a.filter(x=>B.has(x)).length/a.length};
+const mpDice=(a,b)=>{if(!a.length||!b.length)return 0;const B=new Set(b);return 2*a.filter(x=>B.has(x)).length/(a.length+b.length)};
+/* lo inmediatamente a la izquierda del casillero: el último tramo después de «?» / «:» */
+const mpNear=t=>{const s=String(t||"").split(/[?:]\s+|\s(?=¿)/).map(x=>x.trim()).filter(x=>x&&!/^(s[ií]|no)( (s[ií]|no))*$/i.test(x));return s.length?s[s.length-1]:""};
+const mpPathN=p=>String(p||"").replace(/\[(\d+|i|n)?\]/g,"[]").trim();
+const mpKind=f=>/radio|check|casilla/i.test(f.controlWeb||"")||(/boolean/i.test(f.tipoJson||"")&&!/combo/i.test(f.controlWeb||""))?"opt":/combo/i.test(f.controlWeb||"")||f.opciones.length>1?"combo":"txt";
+function mpDicOf(f){
+  const p=mpPathN(f.campoJson);let i=p?DIC.findIndex(d=>mpPathN(d[4])===p):-1;
+  if(i>=0)return{st:"ok",i};
+  const n=slug(f.nombreWeb);i=n?DIC.findIndex(d=>slug(d[0])===n||d[1].some(s=>slug(s)===n)):-1;
+  return i>=0?{st:"dif",i}:{st:"none",i:-1};
+}
+function mpScore(f,u){
+  const fk=f.kind,uk=u.ft==="Btn"?"opt":"txt";
+  const near=mpTok(mpNear(u.ctx.left)),left=mpTok(u.ctx.left),above=mpTok(u.ctx.above),nm=mpTok(u.name.replace(/\[n\]/g,""));
+  const txts=[];if(f.nombrePdf&&!f.sinPdf)txts.push([f.nombrePdf,1,"nombre en PDF de la ficha"]);if(f.nombreWeb)txts.push([f.nombreWeb,.85,"nombre web de la ficha"]);
+  if(f.dic.st==="ok")[DIC[f.dic.i][0],...DIC[f.dic.i][1]].forEach(s=>txts.push([s,.9,"sinónimo del Diccionario INS"]));
+  let best={s:0,why:""};
+  const consider=(s,why)=>{if(s>best.s)best={s,why}};
+  for(const[t,w,src]of txts){const T=mpTok(t);if(!T.length)continue;
+    if(near.length)consider(w*(.5*mpCont(T,near)+.5*mpDice(T,near)),`texto junto al casillero «${mpNear(u.ctx.left)}» ≈ ${src} «${t}»`);
+    consider(w*.6*mpCont(T,left),`texto a la izquierda «${u.ctx.left}» ≈ ${src} «${t}»`);
+    if(above.length)consider(w*.75*(.6*mpCont(T,above)+.4*mpDice(T,above)),`texto arriba del casillero «${u.ctx.above}» ≈ ${src} «${t}»`);
+    consider(w*.9*mpDice(T,nm),`nombre del casillero «${u.name}» ≈ ${src} «${t}»`);
+  }
+  /* señales fuertes */
+  if(f.nombreInternoPdf&&!f.sinPdf&&(u.name===f.nombreInternoPdf||u.miembros.includes(f.nombreInternoPdf)))best={s:1,why:`«Nombre interno del campo en PDF» de la ficha = ${f.nombreInternoPdf}`};
+  else if(f.dic.st==="ok"&&DIC[f.dic.i][1].some(s=>s===u.name||u.miembros.includes(s)))best={s:.95,why:`el Diccionario INS lista «${u.name}» como nombre en el PDF`};
+  let s=best.s;const notes=[];
+  /* contexto: la sección de la ficha o la ruta JSON comparten palabra con el nombre del casillero */
+  const ctxT=mpTok([f.seccion,String(f.campoJson||"").split(".").slice(-2,-1)[0]||""].join(" ").replace(/([a-z])([A-Z])/g,"$1 $2"));
+  const sh=nm.filter(x=>ctxT.includes(x)&&x.length>3);
+  if(s>0&&sh.length){s+=.15;notes.push(`la sección / ruta comparte «${sh.join(", ")}» con el nombre del casillero`)}
+  if(s>0&&f.json.st==="ok"){s+=.03;notes.push("el JSON main trae ese dato")}
+  else if(s>0&&f.json.st==="no"){s*=.9;notes.push("el JSON main no trae ese dato")}
+  if((fk==="opt"&&uk==="txt")||(fk==="txt"&&uk==="opt")){s*=.5;notes.push(`tipos distintos (ficha: ${f.controlWeb||"?"} / ${f.tipoJson||"?"}; PDF: ${u.tipo})`)}
+  else notes.push(`tipo compatible (${f.controlWeb||"?"} ↔ ${u.tipo})`);
+  return{s:Math.round(s*100)/100,why:best.why,notes};
+}
+/* opciones: ficha (label → JSON) ↔ PDF (valor de la casilla) */
+function mpOptMap(f){
+  f.opcMap=null;const u=f.match&&f.match.u;if(!u)return;
+  if(u.agrupado){const pdf=u.opciones;f.opcMap=(f.opciones.length?f.opciones:pdf.map(o=>({label:o.label}))).map(o=>{const L=slug(o.label);const p=pdf.find(x=>slug(x.label)===L||slug(x.pdfValue)===L||(L.length>2&&(slug(x.pdfValue).startsWith(L)||L.startsWith(slug(x.pdfValue)))));return{label:o.label,jsonValue:o.jsonValue||"",pdfValue:p?p.pdfValue:"",widget:p?p.widget:""}});
+    const sobran=pdf.filter(p=>!f.opcMap.some(o=>o.pdfValue===p.pdfValue));sobran.forEach(p=>f.opcMap.push({label:"",jsonValue:"",pdfValue:p.pdfValue,widget:p.widget,soloPdf:true}))}
+}
+function mpMatch(){
+  const units=MP.units,F=MP.fichaG;
+  const jset=new Map();MP.json.paths.forEach(p=>{if(p.type==="array")return;const k=mpPathN(p.path);if(!jset.has(k))jset.set(k,p)});
+  F.forEach((f,i)=>{
+    f.id=i;f.kind=mpKind(f);f.dic=mpDicOf(f);
+    f.noCampo=!f.campoJson&&(/no aplica/i.test(f.nombreWeb+" "+f.seccion+" "+f.paso)||/informativ|texto info/i.test(f.controlWeb||"")||!f.nombreWeb||!f.controlWeb.trim());
+    f.esperaPdf=!f.noCampo&&!!f.nombrePdf&&!f.sinPdf&&!/^json$/i.test(f.paso||"");
+    /* JSON */
+    const p=mpPathN(f.campoJson);
+    if(!p)f.json={st:f.noCampo?"na":"vacio"};
+    else if(jset.has(p))f.json={st:"ok",p:jset.get(p)};
+    else{const leaf=p.split(".").pop().replace(/\[\]$/,"");const alt=[...jset.keys()].find(k=>k.split(".").pop().replace(/\[\]$/,"")===leaf);f.json=alt?{st:"otra",alt}:{st:"no"}}
+  });
+  /* puntajes de todos los pares */
+  const cand=F.map(f=>f.noCampo?[]:units.map((u,j)=>({j,...mpScore(f,u)})).filter(c=>c.s>=.2).sort((a,b)=>b.s-a.s));
+  F.forEach((f,i)=>f.cands=cand[i].slice(0,4));
+  /* asignación codiciosa 1 a 1 */
+  const pairs=[];cand.forEach((cs,i)=>cs.forEach(c=>pairs.push({i,...c})));pairs.sort((a,b)=>b.s-a.s);
+  const fUsed=new Map(),uUsed=new Map();
+  pairs.forEach(p=>{if(fUsed.has(p.i)||uUsed.has(p.j))return;const f=F[p.i];if(p.s<(f.esperaPdf?.42:.6))return;fUsed.set(p.i,p);uUsed.set(p.j,p.i)});
+  F.forEach((f,i)=>{
+    const m=fUsed.get(i);f.match=null;
+    if(f.noCampo){f.estado="NO_APLICA";f.senal=`fila sin campo JSON${!f.controlWeb.trim()&&f.nombreWeb&&!/no aplica/i.test(f.nombreWeb)?" ni control (título)":""}: ${f.nombreWeb||f.observaciones||"vacía"}`;return}
+    if(!m){f.estado=f.esperaPdf?"SIN_MATCH":"SIN_PDF";f.confianza=f.cands[0]?Math.min(1,f.cands[0].s):0;
+      f.senal=f.esperaPdf?(f.cands[0]?`el mejor candidato (${units[f.cands[0].j].name}, ${f.cands[0].s}) ya fue tomado por otro campo o no alcanza`:"ningún casillero se parece al «Nombre en PDF»"):"la ficha no le da nombre en el PDF: solo web / JSON";return}
+    const u=units[m.j];f.match={j:m.j,u};f.confianza=Math.min(1,m.s);
+    /* margen: segundo mejor del campo y mejor rival del casillero */
+    const alt=Math.max(f.cands.filter(c=>c.j!==m.j).map(c=>c.s)[0]||0,...F.filter((g,k)=>k!==i&&!g.noCampo&&g.esperaPdf).map(g=>{const c=g.cands.find(c=>c.j===m.j);const own=fUsed.get(g.id);return c&&(!own||c.s>own.s)?c.s:0}));
+    f.margen=Math.round((m.s-alt)*100)/100;
+    f.estado=m.s>=.55&&f.margen>=.1&&f.esperaPdf?"SEGURO":"DUDOSO";
+    f.senal=m.why+" · "+m.notes.join(" · ")+(f.estado==="DUDOSO"?(f.esperaPdf?(m.s<.55?" · puntaje bajo":` · margen chico (${f.margen}) con otro candidato`):" · la ficha no le da nombre en el PDF"):"");
+    mpOptMap(f);
+  });
+  units.forEach((u,j)=>{u.fichaId=uUsed.has(j)?uUsed.get(j):null});
+}
+
+/* ════════ v1.3 · Orden final (Paso WEB → Sección → página → arriba→abajo → izquierda→derecha) y matriz ════════ */
+const MP_SYS="(datos del sistema · JSON)";
+const mpIsJsonPaso=p=>!p||/^json$/i.test(p.trim());
+const mpPos=u=>u&&u.rect?[u.page||99,u.line??-Math.max(u.rect[1],u.rect[3]),Math.min(u.rect[0],u.rect[2])]:null;
+/* renglones: casilleros de la misma página con menos de 6 pt de diferencia de altura van en el mismo renglón (y se leen de izquierda a derecha) */
+function mpLines(units){
+  const top=u=>Math.max(u.rect[1],u.rect[3]);
+  const us=units.filter(u=>u.rect).sort((a,b)=>(a.page-b.page)||(top(b)-top(a)));
+  let line=0,prev=null;us.forEach(u=>{if(prev&&(u.page!==prev.page||top(prev)-top(u)>6))line++;u.line=line;prev=u});
+}
+const mpCmpPos=(a,b)=>a[0]-b[0]||a[1]-b[1]||a[2]-b[2];
+function mpOrder(){
+  const F=MP.fichaG.filter(f=>f.estado!=="NO_APLICA");mpLines(MP.units);
+  /* paso / sección para ordenar: las filas «JSON» van con la fila vecina de la misma hoja (al final de esa sección) */
+  F.forEach(f=>{
+    f.ordPaso=f.paso;f.ordSec=f.seccion;f.ordNota="";
+    if(!mpIsJsonPaso(f.paso))return;
+    const mates=F.filter(g=>g.hoja===f.hoja&&!mpIsJsonPaso(g.paso));
+    const prev=mates.filter(g=>g.filas[0]<f.filas[0]).pop(),next=mates.find(g=>g.filas[0]>f.filas[0]);const v=prev||next;
+    if(v){f.ordPaso=v.paso;f.ordSec=v.seccion;f.ordNota=`dato solo JSON: se ubica al final de «${v.seccion}» (fila vecina ${v.hoja} ${v.filas[0]})`}
+    else{f.ordPaso=MP_SYS;f.ordSec=f.hoja;f.ordNota="dato solo JSON, sin paso web en su hoja: va al final, con los datos del sistema"}
+  });
+  const pasos=[];F.forEach(f=>{if(f.ordPaso!==MP_SYS&&!pasos.includes(f.ordPaso))pasos.push(f.ordPaso)});pasos.push(MP_SYS);
+  const secs=new Map();
+  F.forEach((f,k)=>{const key=f.ordPaso+"|"+f.ordSec;if(!secs.has(key))secs.set(key,{first:k,pos:null});const p=f.match&&mpPos(f.match.u);const s=secs.get(key);if(p&&(!s.pos||mpCmpPos(p,s.pos)<0))s.pos=p});
+  const secCmp=(a,b)=>{const A=secs.get(a),B=secs.get(b);if(A.pos&&B.pos)return mpCmpPos(A.pos,B.pos)||A.first-B.first;if(A.pos)return -1;if(B.pos)return 1;return A.first-B.first};
+  const idx=new Map(F.map((f,k)=>[f,k]));
+  F.sort((a,b)=>{
+    const pa=pasos.indexOf(a.ordPaso),pb=pasos.indexOf(b.ordPaso);if(pa!==pb)return pa-pb;
+    const sa=a.ordPaso+"|"+a.ordSec,sb=b.ordPaso+"|"+b.ordSec;if(sa!==sb)return secCmp(sa,sb);
+    const A=a.match&&mpPos(a.match.u),B=b.match&&mpPos(b.match.u);
+    if(A&&B)return mpCmpPos(A,B)||idx.get(a)-idx.get(b);if(A)return -1;if(B)return 1;
+    /* sin casillero: primero lo que se ve en la web, después lo que es solo JSON */
+    return (mpIsJsonPaso(a.paso)-mpIsJsonPaso(b.paso))||idx.get(a)-idx.get(b);
+  });
+  /* casilleros sin fila en la ficha: al final, en el orden del PDF */
+  const libres=MP.units.filter(u=>u.fichaId==null).sort((a,b)=>mpCmpPos(mpPos(a)||[99,0,0],mpPos(b)||[99,0,0]));
+  const optS=f=>f.opcMap?f.opcMap.map(o=>o.soloPdf?`(solo en el PDF) · PDF ${o.pdfValue}`:`${o.label}${o.jsonValue?` → JSON ${o.jsonValue}`:""} · PDF ${o.pdfValue||"✗ sin casilla"}`).join("\n"):f.opciones.map(o=>`${o.label}${o.jsonValue?` → JSON ${o.jsonValue}`:""}`).join("\n");
+  const pre=f=>/prellen|llenado autom|disabled/i.test(f.visualizacion||"")?"sí":mpIsJsonPaso(f.paso)?"sí (sistema)":"no";
+  const DST={ok:"Coincide",dif:"Ruta distinta",none:"No está"};
+  const rows=F.map(f=>{const u=f.match&&f.match.u;const rep=mpRepOf(f,u);
+    const obs=[f.observaciones?`INS: ${f.observaciones}`:"",f.json.st==="otra"?`La ruta de la ficha no está en el JSON main; ahí está como ${f.json.alt}`:f.json.st==="no"?"La ruta de la ficha no está en el JSON main":"",f.ordNota].filter(Boolean).join("\n");
+    return{f,u,paso_web:f.paso,seccion:f.seccion,pagina_pdf:u?u.page:"",widget_pdf:u?u.miembros.join("\n"):"",tipo_widget:u?u.tipo:"",grupo:u&&(u.agrupado||u.repeater)?u.name:"",
+      label_web:f.nombreWeb,control_web:f.controlWeb,opciones:optS(f),path_json:f.campoJson,tipo_json:f.tipoJson,mapeo_web_json:f.mapeo,obligatorio_web:f.oblWeb,obligatorio_json:f.oblJson,
+      regla:f.regla,repeater:rep?`sí · ${rep}`:"no",prefill:pre(f),estado_match:f.estado,confianza:f.estado==="SEGURO"||f.estado==="DUDOSO"?f.confianza:"",senal:f.senal,
+      hoja:f.hoja,filas:f.filas.join(", "),ruta_dic:f.dic.i>=0?DIC[f.dic.i][4]:"",estado_dic:DST[f.dic.st],observaciones:obs}});
+  libres.forEach(u=>rows.push({f:null,u,paso_web:"(sin fila en la ficha)",seccion:"",pagina_pdf:u.page,widget_pdf:u.miembros.join("\n"),tipo_widget:u.tipo,grupo:u.agrupado||u.repeater?u.name:"",label_web:u.ctx&&mpNear(u.ctx.left)||"",control_web:"",
+    opciones:u.agrupado?u.opciones.map(o=>`${o.label} · PDF ${o.pdfValue}`).join("\n"):"",path_json:"",tipo_json:"",mapeo_web_json:"",obligatorio_web:"",obligatorio_json:"",regla:"",repeater:u.repeater?"sí · (sin ruta)":"no",prefill:"",
+    estado_match:"SIN_FICHA",confianza:"",senal:"casillero del PDF que no se cruzó con ninguna fila de la ficha",hoja:"",filas:"",ruta_dic:"",estado_dic:"",observaciones:""}));
+  rows.forEach((r,i)=>r.orden=i+1);
+  return rows;
+}
+/* ════════ v1.5 · Repeaters: solo detectar y marcar ════════ */
+/* listas «contenedor» (una por persona / una por riesgo): no son repeaters de pantalla */
+const mpIsCont=a=>/^(datosFormulario\.)?personas\[\]$/.test(a)||/\.riesgo\[\]$/.test(a);
+/* la lista más interna de la ruta que no es contenedor (padecimientos[], direccion[], …) */
+function mpRepArr(path){
+  const p=mpPathN(path);if(!p)return"";let out="";
+  p.replace(/\[\]/g,(m,i)=>{const a=p.slice(0,i+2);if(!mpIsCont(a))out=a;return m});
+  return out;
+}
+const mpRepName=a=>a.split(".").pop();
+function mpRepeaters(){
+  const R=new Map();const get=a=>{if(!R.has(a))R.set(a,{arr:a,name:mpRepName(a),json:null,campos:[],pdf:[]});return R.get(a)};
+  MP.json.arrays.forEach(x=>{const a=mpPathN(x.path)+"[]";if(mpIsCont(a))return;const r=get(a);r.json=Math.max(r.json||0,x.len)});
+  MP.fichaG.forEach(f=>{if(f.estado==="NO_APLICA")return;const a=mpRepArr(f.campoJson);if(!a)return;const r=get(a);r.campos.push(f);if(f.match&&!r.pdf.includes(f.match.u))r.pdf.push(f.match.u)});
+  MP.units.filter(u=>u.repeater).forEach(u=>{const f=u.fichaId!=null?MP.fichaG[u.fichaId]:null;if(f&&mpRepArr(f.campoJson))return;const r=get("(PDF) "+u.repeater.base);r.pdf.push(u)});
+  return[...R.values()].map(r=>{
+    const filas=r.pdf.filter(u=>u.repeater).map(u=>u.repeater.filas.length);const nf=filas.length?Math.max(...filas):r.pdf.length?1:0;
+    const notas=[];
+    if(r.arr.startsWith("(PDF)"))notas.push("tabla repetida en el PDF cuyos casilleros no van a una lista del JSON");
+    if(r.json==null&&!r.arr.startsWith("(PDF)"))notas.push("la ficha la usa como lista pero el JSON main no la trae");
+    if(!r.campos.length&&!r.arr.startsWith("(PDF)"))notas.push("lista del JSON sin filas en la ficha");
+    if(r.pdf.length&&nf===1)notas.push("en el PDF hay un solo renglón: el resto de los elementos solo va por JSON / web");
+    if(!r.pdf.length&&r.campos.length)notas.push("ningún casillero del PDF: solo web / JSON");
+    if(new Set(filas).size>1)notas.push(`las columnas del PDF no tienen las mismas filas (${filas.join(", ")})`);
+    return Object.assign(r,{filasPdf:nf,notas});
+  });
+}
+function mpRepOf(f,u){
+  const a=mpRepArr(f.campoJson);const n=u&&u.repeater?u.repeater.filas.length:u?1:0;
+  if(a)return`${mpRepName(a)}${u?` · PDF ${n} fila${n>1?"s":""}`:""}`;
+  if(u&&u.repeater)return`(PDF ${n} filas; la ruta no es lista)`;
+  return"";
+}
+
+/* ════════ Huecos: todo lo que no cierra ════════ */
+function mpHuecos(){
+  const H=[];const add=(tipo,grav,det,f,extra={})=>H.push({tipo,gravedad:grav,detalle:det,hoja:f?f.hoja:"",filas:f?f.filas.join(", "):"",widget:extra.widget||(f&&f.match?f.match.u.name:""),ruta:extra.ruta??(f?f.campoJson:""),sugerencia:extra.sug||""});
+  MP.fichaG.forEach(f=>{
+    if(f.estado==="NO_APLICA")return;
+    if(f.estado==="SIN_MATCH")add("Sin casillero en el PDF","error",`«${f.nombrePdf}» (${f.nombreWeb}) tiene nombre en el PDF pero no se encontró el casillero. ${f.senal}`,f,{sug:f.cands.length?"Candidatos: "+f.cands.slice(0,3).map(c=>`${MP.units[c.j].name} (${Math.min(1,c.s).toFixed(2)})`).join(", "):""});
+    if(f.estado==="DUDOSO")add("Cruce dudoso","aviso",`«${f.nombreWeb}» ↔ ${f.match.u.name}: ${f.senal}`,f,{sug:"Revisar y confirmar en «Resolver dudosos»"});
+    if(f.json.st==="otra")add("Ruta JSON distinta","aviso",`La ruta de la ficha no está en el JSON main`,f,{sug:`En el JSON main está como ${f.json.alt}`});
+    if(f.json.st==="no")add("Ruta JSON que no está en el JSON main","aviso",`«${f.nombreWeb}»: ${f.campoJson}`,f);
+    if(f.json.st==="vacio")add("Sin ruta JSON","error",`«${f.nombreWeb||f.nombrePdf}» no tiene «Nombre del campo en el JSON»`,f);
+    if(f.dic.st==="dif")add("Distinto al Diccionario INS","aviso",`«${f.nombreWeb}»: la ficha usa ${f.campoJson||"(sin ruta)"}`,f,{sug:`Diccionario: ${DIC[f.dic.i][0]} → ${DIC[f.dic.i][4]}`});
+    if(f.dic.st==="none"&&f.campoJson)add("No está en el Diccionario INS","info",`«${f.nombreWeb}» (${f.campoJson})`,f);
+    (f.opcMap||[]).forEach(o=>{if(o.soloPdf)add("Opción solo en el PDF","aviso",`${f.match.u.name}: la casilla «${o.pdfValue}» no tiene opción en la ficha`,f,{widget:o.widget});else if(!o.pdfValue)add("Opción sin casilla en el PDF","aviso",`«${f.nombreWeb}»: la opción «${o.label}» no tiene casilla en ${f.match.u.name}`,f)});
+  });
+  mpRepeaters().forEach(r=>r.notas.forEach(n=>add("Repeater","info",`${r.name}: ${n}`,null,{ruta:r.arr.startsWith("(PDF)")?"":r.arr,widget:r.pdf.map(u=>u.name).join(", ")})));
+  MP.units.filter(u=>u.fichaId==null).forEach(u=>add("Casillero sin fila en la ficha","error",`${u.name} (${u.tipo}, pág. ${u.page}) no se cruzó con ninguna fila`,null,{widget:u.miembros.join(", "),ruta:""}));
+  const usadas=new Set(MP.fichaG.map(f=>mpPathN(f.campoJson)).filter(Boolean));MP.fichaG.forEach(f=>{if(f.json.alt)usadas.add(f.json.alt)});
+  const vistas=new Set();
+  MP.json.paths.forEach(p=>{if(p.type==="array"||p.type==="object")return;const k=mpPathN(p.path);if(usadas.has(k)||vistas.has(k))return;vistas.add(k);add("Dato del JSON sin fila en la ficha","aviso",`${k} (ejemplo: ${typeof p.ex==="string"?p.ex:JSON.stringify(p.ex)})`,null,{ruta:k})});
+  return H;
+}
+
+/* ════════ Excel de salida: Matriz · Huecos · Preguntas_INS · Resumen ════════ */
+const MP_MCOLS=[["orden",7],["paso_web",22],["seccion",22],["pagina_pdf",8],["widget_pdf",30],["tipo_widget",12],["grupo",24],["label_web",36],["control_web",14],["opciones",34],["path_json",48],["tipo_json",12],["mapeo_web_json",30],["obligatorio_web",10],["obligatorio_json",10],["regla",36],["repeater",30],["prefill",10],["estado_match",12],["confianza",9],["senal",60],["hoja",16],["filas",10],["ruta_dic",48],["estado_dic",14],["observaciones",48]];
+const MP_MHEAD={orden:"orden",paso_web:"paso_web",seccion:"seccion",pagina_pdf:"pagina_pdf",widget_pdf:"widget_pdf",tipo_widget:"tipo_widget",grupo:"grupo",label_web:"label_web",control_web:"control_web",opciones:"opciones (WEB → JSON · PDF)",path_json:"path_json",tipo_json:"tipo_json",mapeo_web_json:"mapeo_web_json",obligatorio_web:"obligatorio_web",obligatorio_json:"obligatorio_json",regla:"regla / visibilidad",repeater:"repeater",prefill:"prefill",estado_match:"estado_match",confianza:"confianza",senal:"señal (por qué)",hoja:"hoja_ficha_origen",filas:"fila_ficha_origen",ruta_dic:"ruta_diccionario",estado_dic:"estado_diccionario",observaciones:"observaciones"};
+const MP_FILL={SEGURO:"FFE2F3EA",DUDOSO:"FFFBEFDC",SIN_MATCH:"FFFBE6E4",SIN_PDF:"FFE9ECFB",SIN_FICHA:"FFFBE6E4",error:"FFFBE6E4",aviso:"FFFBEFDC",info:"FFE9ECFB"};
+async function mpXlsx(){
+  const M=mpOrder(),H=mpHuecos();
+  const wb=new ExcelJS.Workbook();wb.creator="Signaframe · Ordenar y mapear "+MP_VERSION;
+  const sheet=(name,cols,rows,colorKey)=>{
+    const ws=wb.addWorksheet(name,{views:[{state:"frozen",ySplit:1}]});
+    ws.columns=cols.map(([k,w,h])=>({header:h||k,key:k,width:w}));
+    const hr=ws.getRow(1);hr.font={bold:true,color:{argb:"FFFFFFFF"}};hr.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF1B1F2A"}};hr.alignment={vertical:"middle",wrapText:true};hr.height=30;
+    rows.forEach(r=>{const row=ws.addRow(r);row.alignment={vertical:"top",wrapText:true};const c=colorKey&&MP_FILL[r[colorKey]];if(c)row.getCell(colorKey).fill={type:"pattern",pattern:"solid",fgColor:{argb:c}}});
+    ws.autoFilter={from:{row:1,column:1},to:{row:1,column:cols.length}};return ws;
+  };
+  const mws=sheet("Matriz",MP_MCOLS.map(([k,w])=>[k,w,MP_MHEAD[k]]),M.map(r=>{const o={};MP_MCOLS.forEach(([k])=>o[k]=r[k]??"");return o}),"estado_match");
+  mws.getColumn("confianza").numFmt="0.00";
+  sheet("Huecos",[["tipo",30],["gravedad",10],["detalle",70],["hoja",16],["filas",10],["widget",30],["ruta",48],["sugerencia",50]],H,"gravedad");
+  /* todas las filas de la ficha, tal cual, con su hoja / fila y a dónde fueron */
+  const ofRow=new Map();MP.fichaG.forEach(f=>f.filas.forEach(n=>ofRow.set(f.hoja+"|"+n,f)));
+  const ordOf=new Map(M.filter(r=>r.f).map(r=>[r.f,r.orden]));
+  const K=Object.values(FICHA_COLS);
+  sheet("Preguntas_INS",[["hoja",16],["fila",6],...K.map(k=>[k,k==="campoJson"?44:18]),["estado_match",12],["widget_pdf",28],["orden_en_matriz",10]],
+    MP.ficha.rows.map(r=>{const f=ofRow.get(r.hoja+"|"+r.fila);const o={hoja:r.hoja,fila:r.fila};K.forEach(k=>o[k]=r[k]??"");o.estado_match=f?f.estado:"";o.widget_pdf=f&&f.match?f.match.u.name:"";o.orden_en_matriz=f&&ordOf.has(f)?ordOf.get(f):"";return o}),"estado_match");
+  const cnt=k=>M.filter(r=>r.estado_match===k).length;const nW=MP.pdf.fields.reduce((a,f)=>a+f.widgets.length,0);
+  const enM=new Set(M.flatMap(r=>r.widget_pdf?r.widget_pdf.split("\n"):[]));
+  const R=[["Herramienta",`Signaframe · Ordenar y mapear ${MP_VERSION}`],["Fecha",new Date().toISOString().slice(0,16).replace("T"," ")],
+    ["PDF",MP.files.pdf.name],["JSON main",MP.files.json.name],["Ficha del INS",MP.files.xlsx.name],["Diccionario INS",`${DIC.length} campos`],[],
+    ["Widgets del PDF",nW],["Widgets en la Matriz",MP.pdf.fields.filter(f=>enM.has(f.name)).length],["Campos del PDF (agrupados)",MP.units.length],
+    ["Filas de la ficha",MP.ficha.rows.length],["Campos de la ficha (agrupados)",MP.fichaG.length],["Filas en la Matriz",M.length],[],
+    ...["SEGURO","DUDOSO","SIN_MATCH","SIN_PDF","SIN_FICHA"].map(k=>[k,cnt(k)]),["NO_APLICA (solo en Preguntas_INS)",MP.fichaG.filter(f=>f.estado==="NO_APLICA").length],[],
+    ["Repeaters",mpRepeaters().map(r=>`${r.name}: ${r.campos.length} campos en la ficha · JSON ${r.json??"—"} · PDF ${r.filasPdf} fila(s)`).join("\n")||"—"],[],
+    ["Huecos: errores",H.filter(h=>h.gravedad==="error").length],["Huecos: avisos",H.filter(h=>h.gravedad==="aviso").length],["Huecos: info",H.filter(h=>h.gravedad==="info").length],[],
+    ["Orden","Paso WEB (orden de la ficha) → Sección (posición en el PDF) → página → arriba→abajo → izquierda→derecha; los datos solo JSON van al final de su sección; los datos del sistema, al final."],
+    ["Estados","SEGURO: cruce claro. DUDOSO: revisar. SIN_MATCH: la ficha nombra un casillero que no se encontró. SIN_PDF: la ficha no le da casillero (solo web / JSON). SIN_FICHA: casillero sin fila en la ficha. NO_APLICA: fila sin campo (títulos, «No aplica»)."]];
+  const rs=wb.addWorksheet("Resumen");rs.columns=[{width:36},{width:110}];R.forEach(r=>{const row=rs.addRow(r);row.alignment={vertical:"top",wrapText:true};if(r[0])row.getCell(1).font={bold:true}});
+  wb.views=[{activeTab:0}];
+  const buf=await wb.xlsx.writeBuffer();
+  const base=(MP.files.pdf.name||"formulario").replace(/\.pdf$/i,"");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));a.download=`${base}_matriz_normalizada.xlsx`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+  return{M,H};
+}
+
+/* ════════ UI ════════ */
+const inputs={pdf:"#mp-pdf",json:"#mp-json",xlsx:"#mp-xlsx"};
+Object.entries(inputs).forEach(([k,sel])=>$(sel).addEventListener("change",e=>{
+  const f=e.target.files[0];MP.files[k]=f||null;const st=$(sel+"-st");st.className="st"+(f?" ok":"");st.textContent=f?`${f.name} · ${(f.size/1024).toFixed(0)} KB`:"";
+  const n=Object.values(MP.files).filter(Boolean).length;$("#mp-go").disabled=n<3;$("#mp-msg").textContent=n<3?`Faltan ${3-n} archivo${3-n>1?"s":""}.`:"Listo para procesar.";
+}));
+$("#mp-go").addEventListener("click",async()=>{
+  const m=$("#mp-msg");m.textContent="Procesando…";$("#mp-go").disabled=true;
+  const fail=(k,e)=>{const st=$(inputs[k]+"-st");st.className="st bad";st.textContent=e};
+  try{
+    try{MP.pdf=await mpReadPdf(new Uint8Array(await MP.files.pdf.arrayBuffer()))}catch(e){fail("pdf","No se pudo leer el PDF.");throw e}
+    try{MP.json=mpReadJson(await MP.files.json.text())}catch(e){fail("json","No es un JSON válido.");throw e}
+    try{MP.ficha=await mpReadFicha(await MP.files.xlsx.arrayBuffer())}catch(e){fail("xlsx","No se pudo leer el Excel.");throw e}
+    MP.text=await mpPdfText(new Uint8Array(await MP.files.pdf.arrayBuffer()));
+    MP.pdf.fields.forEach(f=>{f.ctx=mpCtx(MP.text.items,f.page,f.rect)});
+    MP.pdfG=mpGroupPdf(MP.pdf.fields);MP.pdfG.forEach(g=>{const m=MP.pdf.fields.filter(f=>g.miembros.includes(f.name));const first=m.reduce((a,f)=>!a||(f.rect&&a.rect&&f.rect[0]<a.rect[0])?f:a,null);g.ctx=first?first.ctx:{left:"",above:"",right:""};g.optTxt=m.map(f=>f.ctx.right)});
+    MP.fichaG=mpGroupFicha(MP.ficha.rows);
+    MP.units=mpCollapseRep(MP.pdfG);mpMatch();MP.pred=mpPredApply();MP_DUD=null;
+    mpRender();m.textContent=MP.pred?`Listo. Se aplicaron ${MP.pred} predeterminados guardados para ${mpFormKey()}.`:"Listo.";
+  }catch(e){console.warn(e);m.textContent="No se pudo procesar: revisá el archivo marcado en rojo."}
+  finally{$("#mp-go").disabled=false}
+});
+let MP_TAB="mat";
+document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{MP_TAB=b.dataset.tab;document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));mpTable()}));
+$("#mp-q").addEventListener("input",()=>mpTable());
+$("#mp-grp").addEventListener("change",()=>mpTable());
+$("#mp-est").addEventListener("change",()=>mpTable());
+$("#mp-dl").addEventListener("click",async()=>{const m=$("#mp-msg");try{const r=await mpXlsx();m.textContent=`Matriz bajada: ${r.M.length} filas · ${r.H.length} huecos.`}catch(e){console.warn(e);m.textContent="No se pudo armar el Excel."}});
+function mpRender(){
+  const P=MP.pdf,J=MP.json,F=MP.ficha;
+  const byFt=P.fields.reduce((a,f)=>(a[f.ft]=(a[f.ft]||0)+1,a),{});
+  const nW=P.fields.reduce((a,f)=>a+f.widgets.length,0);
+  $("#mp-stats").innerHTML=[
+    `<span><b>${P.fields.length}</b> campos en el PDF (${Object.entries(byFt).map(([k,v])=>`${v} /${esc(k)}`).join(", ")}) · <b>${nW}</b> widgets · ${P.pages} págs.</span>`,
+    `<span><b>${J.paths.filter(p=>p.type!=="array").length}</b> datos en el JSON · <b>${J.arrays.length}</b> listas (repeaters)</span>`,
+    `<span><b>${F.rows.length}</b> filas en la ficha · ${F.sheets.filter(s=>s.rows).length} hojas con datos</span>`,
+    `<span>Cruce: ${["SEGURO","DUDOSO","SIN_MATCH","SIN_PDF","NO_APLICA"].map(e=>`<b>${MP.fichaG.filter(f=>f.estado===e).length}</b> ${e}`).join(" · ")} · <b>${MP.units.filter(u=>u.fichaId==null).length}</b> casilleros del PDF sin fila en la ficha</span>`,
+    `<span>Agrupado: <b>${MP.pdfG.length}</b> campos del PDF (${MP.pdfG.filter(g=>g.agrupado).length} grupos de opciones) · <b>${MP.fichaG.length}</b> campos de la ficha (${MP.fichaG.filter(g=>g.agrupado).length} con filas por opción)</span>`].join("");
+  const ws=[...P.warns,...J.warns,...F.warns];
+  $("#mp-warns").innerHTML=ws.map(w=>`<li class="${w.k==="e"?"e":w.k==="w"?"w":""}">${esc(w.t)}</li>`).join("");
+  $("#mp-out").hidden=false;mpTable();
+}
+function mpTable(){
+  const q=($("#mp-q").value||"").trim().toLowerCase();const hit=a=>!q||a.some(x=>String(x??"").toLowerCase().includes(q));
+  let head=[],rows=[];const G=$("#mp-grp").checked;
+  const optTxt=os=>os.map(o=>`${esc(o.label??o.pdfValue)}${o.jsonValue?` <span class="mono">→ ${esc(o.jsonValue)}</span>`:""}${o.widget&&o.widget!==o.label?` <span class="mono" style="color:var(--muted)">(${esc(o.widget)})</span>`:""}`).join("<br>");
+  const E=$("#mp-est").value;$("#mp-est").hidden=!(MP_TAB==="res"||MP_TAB==="mat");$("#mp-grp").parentNode.hidden=!(MP_TAB==="pdf"||MP_TAB==="ficha");
+  const JST={ok:"✓",otra:"≠ otra ruta",no:"✗ no está",vacio:"—",na:""};
+  $("#mp-table").classList.toggle("dudbox",MP_TAB==="dud");
+  if(MP_TAB==="dud"){mpDud(q);return}
+  if(MP_TAB==="mat"){head=["#","Paso WEB","Sección","Pág.","Casillero del PDF","Nombre en formulario","Opciones (WEB → JSON · PDF)","Campo en el JSON","Prefill","Estado","Conf.","Origen"];
+    rows=mpOrder().filter(r=>(!E||r.estado_match===E)&&hit(Object.values(r))).map(r=>[r.orden,esc(r.paso_web),esc(r.seccion),r.pagina_pdf,`<span class="mono">${esc(r.grupo||r.widget_pdf)}</span>${r.tipo_widget?` <span class="tag">${esc(r.tipo_widget)}</span>`:""}`,esc(r.label_web),esc(r.opciones).replace(/\n/g,"<br>"),`<span class="mono">${esc(r.path_json)}</span>`,esc(r.prefill),`<span class="est ${r.estado_match}">${r.estado_match}</span>`,r.confianza!==""?(+r.confianza).toFixed(2):"",r.hoja?`${esc(r.hoja)} · ${r.filas}`:""])}
+  else if(MP_TAB==="rep"){head=["Lista","Ruta","Elementos en el JSON main","Campos en la ficha","Casilleros del PDF","Filas en el PDF","Notas"];
+    rows=mpRepeaters().filter(r=>hit([r.arr,...r.campos.map(f=>f.nombreWeb),...r.pdf.map(u=>u.name)])).map(r=>[`<b>${esc(r.name)}</b>`,`<span class="mono">${esc(r.arr)}</span>`,r.json??"—",r.campos.map(f=>esc(f.nombreWeb)).join("<br>")||"—",r.pdf.map(u=>`<span class="mono">${esc(u.name)}</span>`).join("<br>")||"—",r.filasPdf||"—",r.notas.map(esc).join("<br>")])}
+  else if(MP_TAB==="hue"){head=["Tipo","Gravedad","Detalle","Origen","Casillero","Ruta","Sugerencia"];
+    rows=mpHuecos().filter(h=>hit(Object.values(h))).map(h=>[esc(h.tipo),`<span class="est ${h.gravedad==="error"?"SIN_MATCH":h.gravedad==="aviso"?"DUDOSO":"SIN_PDF"}">${h.gravedad}</span>`,esc(h.detalle),h.hoja?`${esc(h.hoja)} · ${h.filas}`:"",`<span class="mono">${esc(h.widget)}</span>`,`<span class="mono">${esc(h.ruta)}</span>`,esc(h.sugerencia)])}
+  else if(MP_TAB==="res"){head=["Estado","Conf.","Hoja · filas","Nombre en formulario","Nombre en PDF (ficha)","Casillero del PDF","Opciones (WEB → JSON · PDF)","Campo en el JSON","Diccionario INS","Por qué"];
+    rows=MP.fichaG.filter(f=>(!E||f.estado===E)&&hit([f.estado,f.hoja,f.nombreWeb,f.nombrePdf,f.campoJson,f.match&&f.match.u.name,f.senal])).map(f=>[`<span class="est ${f.estado}">${f.estado}</span>`,f.confianza!=null&&f.estado!=="NO_APLICA"?f.confianza.toFixed(2):"",`${esc(f.hoja)} · ${f.filas.join(", ")}`,esc(f.nombreWeb),esc(f.nombrePdf),
+      f.match?`<span class="mono">${esc(f.match.u.name)}</span> <span class="tag">${esc(f.match.u.tipo)} · p${f.match.u.page}</span>${f.match.u.repeater?` <span class="tag arr">repite ×${f.match.u.repeater.filas.length}</span>`:""}`:"",
+      f.opcMap?f.opcMap.map(o=>`${o.soloPdf?'<span class="tag">solo PDF</span>':esc(o.label)}${o.jsonValue?` <span class="mono">→ ${esc(o.jsonValue)}</span>`:""} · <span class="mono">${o.pdfValue?esc(o.pdfValue):"✗"}</span>`).join("<br>"):optTxt(f.opciones),
+      f.campoJson?`<span class="mono">${esc(f.campoJson)}</span> <span class="tag">${JST[f.json.st]}</span>${f.json.alt?`<br><span class="mono" style="color:var(--pdf)">en el JSON: ${esc(f.json.alt)}</span>`:""}`:"",
+      f.dic.st==="ok"?`✓ ${esc(DIC[f.dic.i][0])}`:f.dic.st==="dif"?`<span style="color:var(--pdf)">≠ ${esc(DIC[f.dic.i][0])}: <span class="mono">${esc(DIC[f.dic.i][4])}</span></span>`:'<span style="color:var(--muted)">no está</span>',
+      `<span class="why">${esc(f.senal)}</span>`]);}
+  else if(MP_TAB==="pdf"&&G){head=["#","Campo / grupo","Tipo","Pág.","Posición (x, y)","Opciones (valor en el PDF)"];
+    rows=MP.pdfG.filter(g=>hit([g.name,g.tipo,...g.miembros])).map((g,i)=>[i+1,`<span class="mono">${esc(g.name)}</span>${g.agrupado?` <span class="tag btn">${g.miembros.length} casillas</span>`:""}`,`<span class="tag ${g.ft==="Tx"?"tx":"btn"}">/${esc(g.ft)}</span> ${esc(g.tipo)}`,g.page??"—",g.rect?`${Math.round(g.rect[0])}, ${Math.round(g.rect[3])}`:"—",optTxt(g.opciones)])}
+  else if(MP_TAB==="ficha"&&G){head=["Hoja","Filas","Paso","Sección","Nombre en formulario","Control WEB","Opciones (→ valor JSON)","Tipo JSON","Campo en el JSON"];
+    rows=MP.fichaG.filter(g=>hit([g.hoja,g.nombreWeb,g.campoJson,g.paso,g.seccion])).map(g=>[esc(g.hoja),g.filas.join(", "),esc(g.paso),esc(g.seccion),esc(g.nombreWeb),esc(g.controlWeb),optTxt(g.opciones),esc(g.tipoJson),`<span class="mono">${esc(g.campoJson)}</span>`])}
+  else if(MP_TAB==="pdf"){head=["#","Nombre del campo","Tipo","Pág.","Posición (x, y)","Widgets","Valores / opciones","Rótulo (TU)"];
+    rows=MP.pdf.fields.map((f,i)=>[i+1,`<span class="mono">${esc(f.name)}</span>`,`<span class="tag ${f.ft==="Tx"?"tx":"btn"}">/${esc(f.ft)}</span> ${esc(f.tipo)}`,f.page??"—",f.rect?`${Math.round(f.rect[0])}, ${Math.round(f.rect[3])}`:"—",f.widgets.length,esc([...f.states,...f.opts].join(" · ")),esc(f.label)]).filter((r,i)=>hit([MP.pdf.fields[i].name,MP.pdf.fields[i].tipo,MP.pdf.fields[i].label]))}
+  else if(MP_TAB==="json"){head=["Ruta","Tipo","Ejemplo"];
+    rows=MP.json.paths.filter(p=>hit([p.path,p.type,p.ex])).map(p=>[`<span class="mono">${esc(p.path)}</span>${p.inArr?` <span class="tag arr" title="Dentro de ${esc(p.inArr)}">en lista</span>`:""}`,p.type==="array"?`<span class="tag arr">lista · ${p.len}</span>`:esc(p.type),p.type==="array"?"":`${esc(typeof p.ex==="string"?p.ex:JSON.stringify(p.ex))}${p.placeholder?' <span class="tag ph">dato del cliente</span>':""}`])}
+  else if(MP_TAB==="ficha"){head=["Hoja","Fila","Paso","Sección","Nombre en formulario","Nombre en PDF","Control WEB","Valores WEB","Tipo JSON","Campo en el JSON","Nombre interno PDF"];
+    rows=MP.ficha.rows.filter(r=>hit(Object.values(r))).map(r=>[esc(r.hoja),r.fila,esc(r.paso),esc(r.seccion),esc(r.nombreWeb),esc(r.nombrePdf),esc(r.controlWeb),esc(r.valoresWeb),esc(r.tipoJson),`<span class="mono">${esc(r.campoJson)}</span>`,r.nombreInternoPdf?(/^no aplica$/i.test(r.nombreInternoPdf)?'<span class="tag">no aplica</span>':`<span class="mono">${esc(r.nombreInternoPdf)}</span>`):'<span class="tag">vacío</span>'])}
+  else{head=["Nodo del JSON","Paso del formulario","Sección","Fila"];
+    rows=MP.ficha.estructura.filter(e=>hit([e.nodo,e.paso,e.seccion])).map(e=>[`<span class="mono">${esc(e.nodo)}</span>`,esc(e.paso),esc(e.seccion),e.fila])}
+  $("#mp-qn").textContent=`${rows.length} filas`;
+  $("#mp-table").innerHTML=rows.length?`<table><thead><tr>${head.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`:'<p class="empty">Nada para mostrar.</p>';
+}
+/* ════════ v1.4 · Resolver dudosos: vista del PDF con el casillero y los candidatos; un clic elige. Predeterminados guardados ════════ */
+const MP_PK="signaframe-mapear-predeterminados-v1";
+const mpFormKey=()=>{const e=MP.json&&MP.json.data&&MP.json.data.encabezado;return String((e&&e.codigoTipoFormulario)||(MP.files.pdf&&MP.files.pdf.name.replace(/\.pdf$/i,""))||"?")};
+const mpFieldKey=f=>`${f.hoja}|${f.campoJson||slug(f.nombreWeb)}`;
+function mpPredAll(){try{return JSON.parse(localStorage.getItem(MP_PK)||"{}")||{}}catch(e){return{}}}
+function mpPredPut(f,val){const all=mpPredAll();const k=mpFormKey();all[k]=all[k]||{};if(val===undefined)delete all[k][mpFieldKey(f)];else all[k][mpFieldKey(f)]=val;try{localStorage.setItem(MP_PK,JSON.stringify(all));return true}catch(e){return false}}
+/* asigna a mano (u = null: no tiene casillero en este PDF) */
+function mpAssign(f,u,how){
+  if(f.match)f.match.u.fichaId=null;
+  f.manual=how;f.prevEstado=f.prevEstado||f.estado;
+  if(u){
+    const prev=MP.fichaG.find(g=>g!==f&&g.match&&g.match.u===u);
+    if(prev){prev.match=null;prev.opcMap=null;prev.estado=prev.esperaPdf?"SIN_MATCH":"SIN_PDF";prev.confianza=0;prev.senal=`su casillero (${u.name}) pasó a «${f.nombreWeb}» (${how})`;prev.prevEstado=prev.prevEstado||"SEGURO"}
+    f.match={j:MP.units.indexOf(u),u};u.fichaId=f.id;f.estado="SEGURO";f.confianza=1;f.senal=`${how}: ${u.name}`;
+  }else{f.match=null;f.estado=f.esperaPdf?"SIN_MATCH":"SIN_PDF";f.confianza=0;f.senal=`${how}: no tiene casillero en este PDF`}
+  mpOptMap(f);
+}
+/* al procesar: aplica lo elegido antes para este formulario */
+function mpPredApply(){
+  const saved=mpPredAll()[mpFormKey()]||{};let n=0;
+  MP.fichaG.forEach(f=>{if(f.estado==="NO_APLICA")return;const v=saved[mpFieldKey(f)];if(v===undefined)return;
+    if(v==="-"){mpAssign(f,null,"predeterminado guardado");n++;return}
+    const u=MP.units.find(x=>x.name===v);if(u){mpAssign(f,u,"predeterminado guardado");n++}});
+  return n;
+}
+const mpPending=f=>f.estado==="DUDOSO"||(f.estado==="SIN_MATCH"&&!f.manual);
+let MP_DUD=null,MP_DUD_PAGE=null,MP_DUD_TOK=0;
+function mpDudList(q){const rk=f=>f.estado==="DUDOSO"?0:mpPending(f)?1:2;return MP.fichaG.filter(f=>(mpPending(f)||f.manual||f.prevEstado)&&(!q||[f.nombreWeb,f.nombrePdf,f.campoJson,f.hoja].some(x=>String(x||"").toLowerCase().includes(q)))).sort((a,b)=>rk(a)-rk(b)||a.id-b.id)}
+function mpDud(q){
+  const L=mpDudList(q);
+  if(MP_DUD==null||!MP.fichaG[MP_DUD]||!L.includes(MP.fichaG[MP_DUD])){const p=L.find(mpPending)||L[0];MP_DUD=p?p.id:null;MP_DUD_PAGE=null}
+  const pend=MP.fichaG.filter(mpPending).length;
+  $("#mp-qn").textContent=`${pend} por resolver`;
+  if(!L.length){$("#mp-table").innerHTML='<p class="empty">No quedan dudosos ni casilleros sin encontrar. 🎉</p>';return}
+  const f=MP.fichaG[MP_DUD];
+  const cands=f.cands.map(c=>({u:MP.units[c.j],s:c.s}));
+  if(f.match&&!cands.some(c=>c.u===f.match.u))cands.unshift({u:f.match.u,s:f.confianza});
+  const page=MP_DUD_PAGE||(f.match&&f.match.u.page)||(cands[0]&&cands[0].u.page)||1;
+  $("#mp-table").innerHTML=`<div class="dud">
+    <ul class="dud-list" role="listbox" aria-label="Campos por resolver">${L.map(g=>`<li><button class="dud-it${g===f?" on":""}" data-f="${g.id}" role="option" aria-selected="${g===f}"><span class="est ${g.estado}">${g.manual?"✓ ":""}${g.estado}</span> <b>${esc(g.nombreWeb||g.nombrePdf)}</b><br><span class="mono">${esc(g.match?g.match.u.name:"— sin casillero")}</span></button></li>`).join("")}</ul>
+    <div class="dud-view">
+      <div class="dud-head">
+        <div><span class="est ${f.estado}">${f.estado}</span> <b>${esc(f.nombreWeb)}</b> <span class="msg">· ${esc(f.hoja)} fila ${f.filas.join(", ")}</span></div>
+        <div class="msg">En el PDF (ficha): «${esc(f.nombrePdf||"—")}» · JSON: <span class="mono">${esc(f.campoJson||"—")}</span></div>
+        <div class="msg why" style="max-width:none">${esc(f.senal)}</div>
+        <div class="dud-btns">${cands.map((c,k)=>`<button class="btn${f.match&&f.match.u===c.u?" cur":""}" data-pick="${MP.units.indexOf(c.u)}"><span class="num">${k+1}</span> ${esc(c.u.name)} <span class="msg">${Math.min(1,c.s).toFixed(2)} · p${c.u.page}</span>${f.match&&f.match.u===c.u?(f.estado==="SEGURO"?" ✓":" · confirmar"):""}</button>`).join("")}
+          <button class="btn" data-pick="-1">No está en el PDF</button>
+          ${f.manual?`<button class="btn" data-undo="1">Deshacer</button>`:""}</div>
+        <label class="msg"><input type="checkbox" id="mp-pd" ${MP.pdOn===false?"":"checked"}> Guardar como predeterminado para ${esc(mpFormKey())}</label>
+      </div>
+      <div class="bar"><span class="msg">Página</span>${Array.from({length:MP.pdf.pages},(_,i)=>`<button class="btn sm${i+1===page?" pri":""}" data-page="${i+1}">${i+1}</button>`).join("")}<span class="msg">· Tocá un casillero del PDF para elegirlo. <span class="lg cur"></span> actual <span class="lg cand"></span> candidatos</span></div>
+      <div class="dud-pdf" id="mp-pdfv"><canvas id="mp-cv"></canvas><div class="dud-ov" id="mp-ov"></div></div>
+    </div></div>`;
+  mpDudPage(f,page,cands);
+}
+async function mpDudPage(f,page,cands){
+  const tok=++MP_DUD_TOK;const doc=MP.text&&MP.text.doc;const box=$("#mp-pdfv");if(!doc||!box)return;
+  const pg=await doc.getPage(page);const w=Math.min(box.clientWidth||800,900);const vp0=pg.getViewport({scale:1});const vp=pg.getViewport({scale:w/vp0.width});
+  const dpr=window.devicePixelRatio||1;const cv=$("#mp-cv");if(tok!==MP_DUD_TOK||!cv)return;
+  cv.width=Math.round(vp.width*dpr);cv.height=Math.round(vp.height*dpr);cv.style.width=vp.width+"px";cv.style.height=vp.height+"px";
+  await pg.render({canvasContext:cv.getContext("2d"),viewport:pg.getViewport({scale:vp.scale*dpr})}).promise;
+  if(tok!==MP_DUD_TOK)return;
+  const fieldBy=new Map(MP.pdf.fields.map(x=>[x.name,x]));
+  const html=[];let first=null;
+  MP.units.forEach((u,j)=>{
+    const ci=cands.findIndex(c=>c.u===u);const cur=f.match&&f.match.u===u;
+    u.miembros.forEach(m=>{const fd=fieldBy.get(m);if(!fd)return;fd.widgets.forEach(wd=>{if(wd.page!==page||!wd.rect)return;
+      const r=vp.convertToViewportRectangle(wd.rect);const x=Math.min(r[0],r[2]),y=Math.min(r[1],r[3]),W=Math.abs(r[2]-r[0]),H=Math.abs(r[3]-r[1]);
+      if((cur||ci>=0)&&first==null)first=y;
+      html.push(`<button class="ov${cur?" cur":ci>=0?" cand":""}" style="left:${x}px;top:${y}px;width:${Math.max(W,6)}px;height:${Math.max(H,6)}px" data-pick="${j}" title="${esc(u.name)}${u.fichaId!=null&&!cur?` (hoy: ${esc(MP.fichaG[u.fichaId].nombreWeb)})`:""}">${ci>=0&&!cur&&u.miembros[0]===m?`<span class="num">${ci+1}</span>`:""}</button>`)})});
+  });
+  const ov=$("#mp-ov");ov.style.width=vp.width+"px";ov.style.height=vp.height+"px";ov.innerHTML=html.join("");
+  if(first!=null){const pv=$("#mp-pdfv");pv.scrollTop=Math.max(0,first-120)}
+}
+function mpDudPick(j){
+  const f=MP.fichaG[MP_DUD];if(!f)return;const u=j>=0?MP.units[j]:null;
+  const save=$("#mp-pd")?$("#mp-pd").checked:true;MP.pdOn=save;
+  mpAssign(f,u,"elegido a mano");
+  let ok=true;if(save)ok=mpPredPut(f,u?u.name:"-");
+  const nx=mpDudList("").find(mpPending);MP_DUD=nx?nx.id:f.id;MP_DUD_PAGE=null;
+  mpRender();
+  $("#mp-msg").textContent=`«${f.nombreWeb}» → ${u?u.name:"sin casillero"}${save?(ok?" · guardado como predeterminado":" · no se pudo guardar el predeterminado en este navegador"):""}.`;
+}
+function mpDudUndo(){
+  const f=MP.fichaG[MP_DUD];if(!f)return;mpPredPut(f,undefined);
+  /* rehace el cruce automático para todo (lo guardado sigue aplicándose) */
+  MP.units.forEach(u=>u.fichaId=null);MP.fichaG.forEach(g=>{delete g.manual;delete g.prevEstado});mpMatch();mpPredApply();MP_DUD=f.id;mpRender();
+  $("#mp-msg").textContent=`«${f.nombreWeb}»: se borró lo elegido y volvió al cruce automático.`;
+}
+$("#mp-table").addEventListener("click",e=>{
+  if(MP_TAB!=="dud")return;const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.f!=null){MP_DUD=+b.dataset.f;MP_DUD_PAGE=null;mpTable();return}
+  if(b.dataset.page){MP_DUD_PAGE=+b.dataset.page;mpTable();return}
+  if(b.dataset.pick!=null){mpDudPick(+b.dataset.pick);return}
+  if(b.dataset.undo){mpDudUndo()}
+});
+</script>
+</body>
+</html>
