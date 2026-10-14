@@ -1,15 +1,17 @@
 #!/usr/bin/env node
 // Regenera la constante DIC de index.html a partir del Diccionario General del INS.
 //
-//   node tools/build_dic.mjs [docs/diccionario_v9.xlsx] [index.html]
+//   node tools/build_dic.mjs [docs/diccionario_v9.xlsx] [index.html mapear.html …]
 //
 // Lee la hoja «Diccionario General» (columnas: Paso, Sección, Visible, Nombre del campo en el PDF,
 // Variables o Sinónimos, Nombre formularios WEB, …, Ruta JSON completa) y reemplaza lo que está
 // entre /*DIC:start*/ y /*DIC:end*/ en index.html (acepta también los marcadores viejos /*DIC:BEGIN*/ … /*DIC:END*/). Sin dependencias: solo Node (zlib + fs).
-import { readFileSync, writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync } from "node:fs";
 import { inflateRawSync } from "node:zlib";
 
-const [xlsxPath = "docs/diccionario_v9.xlsx", htmlPath = "index.html"] = process.argv.slice(2);
+const [xlsxPath = "docs/diccionario_v9.xlsx", ...htmlArgs] = process.argv.slice(2);
+/* por defecto, las dos páginas que usan el diccionario */
+const htmlPaths = htmlArgs.length ? htmlArgs : ["index.html", "mapear.html"].filter(f => existsSync(f));
 const SHEET = "Diccionario General";
 
 /* ── zip mínimo: directorio central + inflate ── */
@@ -75,10 +77,12 @@ const DIC = rows.slice(1).filter(r => r[C.web] && r[C.ruta]).map(r => {
   return [web, syn, r[C.paso], r[C.sec], r[C.ruta], /^s[ií]/i.test(r[C.vis]) ? 1 : 0];
 });
 
-const html = readFileSync(htmlPath, "utf8");
 const re = /\/\*DIC:(?:start|BEGIN)\*\/[\s\S]*?\/\*DIC:(?:end|END)\*\//;
-if (!re.test(html)) throw new Error("index.html no tiene los marcadores /*DIC:start*/ … /*DIC:end*/");
 const block = `/*DIC:start*/\n/* Generado con tools/build_dic.mjs desde ${xlsxPath.split("/").pop()} (${DIC.length} campos). No editar a mano. */\n` +
   `/* [nombre web, sinónimos y nombre en el PDF, paso, sección, ruta JSON, visible (1) u oculto (0)] */\nconst DIC=[\n${DIC.map(d => JSON.stringify(d)).join(",\n")}\n];\n/*DIC:end*/`;
-writeFileSync(htmlPath, html.replace(re, block));
-console.log(`DIC actualizado: ${DIC.length} campos (${DIC.filter(d => !d[5]).length} ocultos) desde ${xlsxPath}`);
+for (const htmlPath of htmlPaths) {
+  const html = readFileSync(htmlPath, "utf8");
+  if (!re.test(html)) throw new Error(`${htmlPath} no tiene los marcadores /*DIC:start*/ … /*DIC:end*/`);
+  writeFileSync(htmlPath, html.replace(re, block));
+  console.log(`${htmlPath}: DIC actualizado, ${DIC.length} campos (${DIC.filter(d => !d[5]).length} ocultos) desde ${xlsxPath}`);
+}
