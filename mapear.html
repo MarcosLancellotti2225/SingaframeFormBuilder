@@ -68,7 +68,8 @@ td.mono,.mono{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
 .tag.arr{background:var(--json-bg);color:var(--json)}
 .tag.ph{background:var(--info-bg);color:var(--info)}
 .filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
-.filters input{font:14px var(--sans);padding:6px 10px;border:1px solid var(--line);border-radius:7px;background:var(--paper);color:var(--ink);min-width:240px}
+.filters label{display:inline-flex;gap:6px;align-items:center}
+.filters input[type=search]{font:14px var(--sans);padding:6px 10px;border:1px solid var(--line);border-radius:7px;background:var(--paper);color:var(--ink);min-width:240px}
 .empty{padding:14px;color:var(--muted)}
 [hidden]{display:none!important}
 </style>
@@ -101,7 +102,7 @@ td.mono,.mono{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
     <button role="tab" data-tab="ficha" aria-selected="false">Ficha del INS</button>
     <button role="tab" data-tab="estr" aria-selected="false">Estructura base JSON</button>
   </div>
-  <div class="filters"><input type="search" id="mp-q" placeholder="Buscar en la tabla…" aria-label="Buscar en la tabla"><span class="msg" id="mp-qn"></span></div>
+  <div class="filters"><input type="search" id="mp-q" placeholder="Buscar en la tabla…" aria-label="Buscar en la tabla"><label class="msg"><input type="checkbox" id="mp-grp" checked> Agrupar opciones</label><span class="msg" id="mp-qn"></span></div>
   <div class="tbox" id="mp-table"></div>
 </section>
 </main>
@@ -110,7 +111,7 @@ td.mono,.mono{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script>
 "use strict";
-const MP_VERSION="v1.0.0";
+const MP_VERSION="v1.1.0";
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const slug=t=>String(t||"").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
@@ -217,6 +218,46 @@ async function mpReadFicha(buf){
   return{rows,sheets,estructura,warns};
 }
 
+/* ════════ v1.1 · Agrupar: casillas del PDF en grupos de opciones; filas-por-opción de la ficha en un campo ════════ */
+const OPT_LABEL={si:"Sí",no:"No"};
+function mpGroupPdf(fields){
+  const btn=fields.filter(f=>f.ft==="Btn"&&f.tipo!=="boton");
+  const pre=n=>{const parts=n.split("_");const out=[];for(let i=1;i<parts.length;i++)out.push(parts.slice(0,i).join("_"));return out.reverse()};
+  /* base de cada casilla = el prefijo más largo (cortando en «_») que comparte con al menos otra casilla */
+  const base=new Map();btn.forEach(f=>{const b=pre(f.name).find(p=>btn.filter(g=>g.name.startsWith(p+"_")).length>=2);if(b)base.set(f.name,b)});
+  const groups=new Map();
+  fields.forEach(f=>{const b=base.get(f.name);if(!b)return;if(!groups.has(b))groups.set(b,[]);groups.get(b).push(f)});
+  const out=[],done=new Set();
+  fields.forEach(f=>{
+    const b=base.get(f.name);
+    if(!b){out.push({name:f.name,ft:f.ft,tipo:f.tipo,page:f.page,rect:f.rect,label:f.label,miembros:[f.name],opciones:f.opts.map(o=>({pdfValue:o,widget:f.name})),agrupado:false});return}
+    if(done.has(b))return;done.add(b);
+    const ms=groups.get(b);const sfx=ms.map(m=>m.name.slice(b.length+1));
+    const top=ms.reduce((a,m)=>(!a||(m.page<a.page)||(m.page===a.page&&m.rect&&a.rect&&m.rect[3]>a.rect[3]))?m:a,null);
+    out.push({name:b,ft:"Btn",tipo:sfx.every(x=>x in OPT_LABEL)?"radio sí/no":"radio",page:top.page,rect:top.rect,label:ms.map(m=>m.label).find(Boolean)||"",
+      miembros:ms.map(m=>m.name),opciones:ms.map((m,i)=>({pdfValue:sfx[i],label:OPT_LABEL[sfx[i]]||sfx[i].replace(/_/g," "),widget:m.name,estado:m.states[0]||""})),agrupado:true});
+  });
+  return out;
+}
+/* valor JSON de cada opción según «Mapeo WEB → JSON» (WEB: Sí → JSON: true; … / «Enviar código 01») */
+function mpOptJson(mapeo,label){
+  const m=String(mapeo||"");const L=slug(label);
+  for(const x of m.matchAll(/WEB:\s*([^→;]+?)\s*→\s*JSON:\s*([^;]+)/gi))if(slug(x[1])===L)return x[2].trim();
+  const c=m.match(/c[oó]digo\s+([A-Za-z0-9]+)/i);return c?c[1]:"";
+}
+function mpGroupFicha(rows){
+  const out=[];const idx=new Map();
+  rows.forEach(r=>{
+    const k=r.campoJson?`${r.hoja}|${r.campoJson}|${slug(r.nombreWeb)}`:null;
+    const opt=r.valoresWeb&&/combo|radio/i.test(r.controlWeb||"")?{label:r.valoresWeb,jsonValue:mpOptJson(r.mapeo,r.valoresWeb),fila:r.fila}:null;
+    if(k&&idx.has(k)){const g=idx.get(k);g.filas.push(r.fila);if(opt)g.opciones.push(opt);return}
+    const g=Object.assign({},r,{filas:[r.fila],opciones:opt?[opt]:[]});delete g.fila;
+    out.push(g);if(k)idx.set(k,g);
+  });
+  out.forEach(g=>{g.agrupado=g.filas.length>1});
+  return out;
+}
+
 /* ════════ UI ════════ */
 const inputs={pdf:"#mp-pdf",json:"#mp-json",xlsx:"#mp-xlsx"};
 Object.entries(inputs).forEach(([k,sel])=>$(sel).addEventListener("change",e=>{
@@ -230,6 +271,7 @@ $("#mp-go").addEventListener("click",async()=>{
     try{MP.pdf=await mpReadPdf(new Uint8Array(await MP.files.pdf.arrayBuffer()))}catch(e){fail("pdf","No se pudo leer el PDF.");throw e}
     try{MP.json=mpReadJson(await MP.files.json.text())}catch(e){fail("json","No es un JSON válido.");throw e}
     try{MP.ficha=await mpReadFicha(await MP.files.xlsx.arrayBuffer())}catch(e){fail("xlsx","No se pudo leer el Excel.");throw e}
+    MP.pdfG=mpGroupPdf(MP.pdf.fields);MP.fichaG=mpGroupFicha(MP.ficha.rows);
     mpRender();m.textContent="Listo.";
   }catch(e){console.warn(e);m.textContent="No se pudo procesar: revisá el archivo marcado en rojo."}
   finally{$("#mp-go").disabled=false}
@@ -237,6 +279,7 @@ $("#mp-go").addEventListener("click",async()=>{
 let MP_TAB="pdf";
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{MP_TAB=b.dataset.tab;document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));mpTable()}));
 $("#mp-q").addEventListener("input",()=>mpTable());
+$("#mp-grp").addEventListener("change",()=>mpTable());
 function mpRender(){
   const P=MP.pdf,J=MP.json,F=MP.ficha;
   const byFt=P.fields.reduce((a,f)=>(a[f.ft]=(a[f.ft]||0)+1,a),{});
@@ -244,15 +287,21 @@ function mpRender(){
   $("#mp-stats").innerHTML=[
     `<span><b>${P.fields.length}</b> campos en el PDF (${Object.entries(byFt).map(([k,v])=>`${v} /${esc(k)}`).join(", ")}) · <b>${nW}</b> widgets · ${P.pages} págs.</span>`,
     `<span><b>${J.paths.filter(p=>p.type!=="array").length}</b> datos en el JSON · <b>${J.arrays.length}</b> listas (repeaters)</span>`,
-    `<span><b>${F.rows.length}</b> filas en la ficha · ${F.sheets.filter(s=>s.rows).length} hojas con datos</span>`].join("");
+    `<span><b>${F.rows.length}</b> filas en la ficha · ${F.sheets.filter(s=>s.rows).length} hojas con datos</span>`,
+    `<span>Agrupado: <b>${MP.pdfG.length}</b> campos del PDF (${MP.pdfG.filter(g=>g.agrupado).length} grupos de opciones) · <b>${MP.fichaG.length}</b> campos de la ficha (${MP.fichaG.filter(g=>g.agrupado).length} con filas por opción)</span>`].join("");
   const ws=[...P.warns,...J.warns,...F.warns];
   $("#mp-warns").innerHTML=ws.map(w=>`<li class="${w.k==="e"?"e":w.k==="w"?"w":""}">${esc(w.t)}</li>`).join("");
   $("#mp-out").hidden=false;mpTable();
 }
 function mpTable(){
   const q=($("#mp-q").value||"").trim().toLowerCase();const hit=a=>!q||a.some(x=>String(x??"").toLowerCase().includes(q));
-  let head=[],rows=[];
-  if(MP_TAB==="pdf"){head=["#","Nombre del campo","Tipo","Pág.","Posición (x, y)","Widgets","Valores / opciones","Rótulo (TU)"];
+  let head=[],rows=[];const G=$("#mp-grp").checked;
+  const optTxt=os=>os.map(o=>`${esc(o.label??o.pdfValue)}${o.jsonValue?` <span class="mono">→ ${esc(o.jsonValue)}</span>`:""}${o.widget&&o.widget!==o.label?` <span class="mono" style="color:var(--muted)">(${esc(o.widget)})</span>`:""}`).join("<br>");
+  if(MP_TAB==="pdf"&&G){head=["#","Campo / grupo","Tipo","Pág.","Posición (x, y)","Opciones (valor en el PDF)"];
+    rows=MP.pdfG.filter(g=>hit([g.name,g.tipo,...g.miembros])).map((g,i)=>[i+1,`<span class="mono">${esc(g.name)}</span>${g.agrupado?` <span class="tag btn">${g.miembros.length} casillas</span>`:""}`,`<span class="tag ${g.ft==="Tx"?"tx":"btn"}">/${esc(g.ft)}</span> ${esc(g.tipo)}`,g.page??"—",g.rect?`${Math.round(g.rect[0])}, ${Math.round(g.rect[3])}`:"—",optTxt(g.opciones)])}
+  else if(MP_TAB==="ficha"&&G){head=["Hoja","Filas","Paso","Sección","Nombre en formulario","Control WEB","Opciones (→ valor JSON)","Tipo JSON","Campo en el JSON"];
+    rows=MP.fichaG.filter(g=>hit([g.hoja,g.nombreWeb,g.campoJson,g.paso,g.seccion])).map(g=>[esc(g.hoja),g.filas.join(", "),esc(g.paso),esc(g.seccion),esc(g.nombreWeb),esc(g.controlWeb),optTxt(g.opciones),esc(g.tipoJson),`<span class="mono">${esc(g.campoJson)}</span>`])}
+  else if(MP_TAB==="pdf"){head=["#","Nombre del campo","Tipo","Pág.","Posición (x, y)","Widgets","Valores / opciones","Rótulo (TU)"];
     rows=MP.pdf.fields.map((f,i)=>[i+1,`<span class="mono">${esc(f.name)}</span>`,`<span class="tag ${f.ft==="Tx"?"tx":"btn"}">/${esc(f.ft)}</span> ${esc(f.tipo)}`,f.page??"—",f.rect?`${Math.round(f.rect[0])}, ${Math.round(f.rect[3])}`:"—",f.widgets.length,esc([...f.states,...f.opts].join(" · ")),esc(f.label)]).filter((r,i)=>hit([MP.pdf.fields[i].name,MP.pdf.fields[i].tipo,MP.pdf.fields[i].label]))}
   else if(MP_TAB==="json"){head=["Ruta","Tipo","Ejemplo"];
     rows=MP.json.paths.filter(p=>hit([p.path,p.type,p.ex])).map(p=>[`<span class="mono">${esc(p.path)}</span>${p.inArr?` <span class="tag arr" title="Dentro de ${esc(p.inArr)}">en lista</span>`:""}`,p.type==="array"?`<span class="tag arr">lista · ${p.len}</span>`:esc(p.type),p.type==="array"?"":`${esc(typeof p.ex==="string"?p.ex:JSON.stringify(p.ex))}${p.placeholder?' <span class="tag ph">dato del cliente</span>':""}`])}
