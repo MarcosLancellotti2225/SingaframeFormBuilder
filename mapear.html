@@ -26,6 +26,7 @@
 *{box-sizing:border-box}
 body{background:var(--bg);color:var(--ink);font:15px/1.6 var(--sans);padding-inline:16px;padding-block:28px 64px;margin:0}
 .wrap{max-width:1180px;margin:0 auto;display:grid;gap:28px}
+.wrap>*{min-width:0}
 h1{font-size:32px;line-height:1.15;margin:0 0 8px;font-weight:600;letter-spacing:-.01em}
 h2{font-size:20px;margin:0 0 6px;font-weight:600}
 .lead{color:var(--muted);max-width:72ch;font-size:16px;margin:0}
@@ -98,17 +99,19 @@ td.mono,.mono{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
 </section>
 
 <section class="card" id="mp-out" hidden aria-labelledby="mp-out-h">
-  <h2 id="mp-out-h">Lo que se leyó</h2>
+  <div class="bar" style="justify-content:space-between"><h2 id="mp-out-h" style="margin:0">Lo que se leyó</h2><button class="btn pri" id="mp-dl">Bajar matriz normalizada (.xlsx)</button></div>
   <div class="stats" id="mp-stats"></div>
   <ul class="warns" id="mp-warns" style="margin-top:10px"></ul>
   <div class="tabs" role="tablist" style="margin-top:14px">
-    <button role="tab" data-tab="res" aria-selected="true">Resultado del cruce</button>
+    <button role="tab" data-tab="mat" aria-selected="true">Matriz ordenada</button>
+    <button role="tab" data-tab="res" aria-selected="false">Resultado del cruce</button>
+    <button role="tab" data-tab="hue" aria-selected="false">Huecos</button>
     <button role="tab" data-tab="pdf" aria-selected="false">PDF</button>
     <button role="tab" data-tab="json" aria-selected="false">JSON main</button>
     <button role="tab" data-tab="ficha" aria-selected="false">Ficha del INS</button>
     <button role="tab" data-tab="estr" aria-selected="false">Estructura base JSON</button>
   </div>
-  <div class="filters"><input type="search" id="mp-q" placeholder="Buscar en la tabla…" aria-label="Buscar en la tabla"><select id="mp-est" aria-label="Filtrar por estado"><option value="">Todos los estados</option><option>SEGURO</option><option>DUDOSO</option><option>SIN_MATCH</option><option>SIN_PDF</option><option>NO_APLICA</option></select><label class="msg"><input type="checkbox" id="mp-grp" checked> Agrupar opciones</label><span class="msg" id="mp-qn"></span></div>
+  <div class="filters"><input type="search" id="mp-q" placeholder="Buscar en la tabla…" aria-label="Buscar en la tabla"><select id="mp-est" aria-label="Filtrar por estado"><option value="">Todos los estados</option><option>SEGURO</option><option>DUDOSO</option><option>SIN_MATCH</option><option>SIN_PDF</option><option>SIN_FICHA</option><option>NO_APLICA</option></select><label class="msg"><input type="checkbox" id="mp-grp" checked> Agrupar opciones</label><span class="msg" id="mp-qn"></span></div>
   <div class="tbox" id="mp-table"></div>
 </section>
 </main>
@@ -118,7 +121,7 @@ td.mono,.mono{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script>
 "use strict";
-const MP_VERSION="v1.2.0";
+const MP_VERSION="v1.3.0";
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const slug=t=>String(t||"").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
@@ -570,6 +573,123 @@ function mpMatch(){
   units.forEach((u,j)=>{u.fichaId=uUsed.has(j)?uUsed.get(j):null});
 }
 
+/* ════════ v1.3 · Orden final (Paso WEB → Sección → página → arriba→abajo → izquierda→derecha) y matriz ════════ */
+const MP_SYS="(datos del sistema · JSON)";
+const mpIsJsonPaso=p=>!p||/^json$/i.test(p.trim());
+const mpPos=u=>u&&u.rect?[u.page||99,u.line??-Math.max(u.rect[1],u.rect[3]),Math.min(u.rect[0],u.rect[2])]:null;
+/* renglones: casilleros de la misma página con menos de 6 pt de diferencia de altura van en el mismo renglón (y se leen de izquierda a derecha) */
+function mpLines(units){
+  const top=u=>Math.max(u.rect[1],u.rect[3]);
+  const us=units.filter(u=>u.rect).sort((a,b)=>(a.page-b.page)||(top(b)-top(a)));
+  let line=0,prev=null;us.forEach(u=>{if(prev&&(u.page!==prev.page||top(prev)-top(u)>6))line++;u.line=line;prev=u});
+}
+const mpCmpPos=(a,b)=>a[0]-b[0]||a[1]-b[1]||a[2]-b[2];
+function mpOrder(){
+  const F=MP.fichaG.filter(f=>f.estado!=="NO_APLICA");mpLines(MP.units);
+  /* paso / sección para ordenar: las filas «JSON» van con la fila vecina de la misma hoja (al final de esa sección) */
+  F.forEach(f=>{
+    f.ordPaso=f.paso;f.ordSec=f.seccion;f.ordNota="";
+    if(!mpIsJsonPaso(f.paso))return;
+    const mates=F.filter(g=>g.hoja===f.hoja&&!mpIsJsonPaso(g.paso));
+    const prev=mates.filter(g=>g.filas[0]<f.filas[0]).pop(),next=mates.find(g=>g.filas[0]>f.filas[0]);const v=prev||next;
+    if(v){f.ordPaso=v.paso;f.ordSec=v.seccion;f.ordNota=`dato solo JSON: se ubica al final de «${v.seccion}» (fila vecina ${v.hoja} ${v.filas[0]})`}
+    else{f.ordPaso=MP_SYS;f.ordSec=f.hoja;f.ordNota="dato solo JSON, sin paso web en su hoja: va al final, con los datos del sistema"}
+  });
+  const pasos=[];F.forEach(f=>{if(f.ordPaso!==MP_SYS&&!pasos.includes(f.ordPaso))pasos.push(f.ordPaso)});pasos.push(MP_SYS);
+  const secs=new Map();
+  F.forEach((f,k)=>{const key=f.ordPaso+"|"+f.ordSec;if(!secs.has(key))secs.set(key,{first:k,pos:null});const p=f.match&&mpPos(f.match.u);const s=secs.get(key);if(p&&(!s.pos||mpCmpPos(p,s.pos)<0))s.pos=p});
+  const secCmp=(a,b)=>{const A=secs.get(a),B=secs.get(b);if(A.pos&&B.pos)return mpCmpPos(A.pos,B.pos)||A.first-B.first;if(A.pos)return -1;if(B.pos)return 1;return A.first-B.first};
+  const idx=new Map(F.map((f,k)=>[f,k]));
+  F.sort((a,b)=>{
+    const pa=pasos.indexOf(a.ordPaso),pb=pasos.indexOf(b.ordPaso);if(pa!==pb)return pa-pb;
+    const sa=a.ordPaso+"|"+a.ordSec,sb=b.ordPaso+"|"+b.ordSec;if(sa!==sb)return secCmp(sa,sb);
+    const A=a.match&&mpPos(a.match.u),B=b.match&&mpPos(b.match.u);
+    if(A&&B)return mpCmpPos(A,B)||idx.get(a)-idx.get(b);if(A)return -1;if(B)return 1;
+    /* sin casillero: primero lo que se ve en la web, después lo que es solo JSON */
+    return (mpIsJsonPaso(a.paso)-mpIsJsonPaso(b.paso))||idx.get(a)-idx.get(b);
+  });
+  /* casilleros sin fila en la ficha: al final, en el orden del PDF */
+  const libres=MP.units.filter(u=>u.fichaId==null).sort((a,b)=>mpCmpPos(mpPos(a)||[99,0,0],mpPos(b)||[99,0,0]));
+  const optS=f=>f.opcMap?f.opcMap.map(o=>o.soloPdf?`(solo en el PDF) · PDF ${o.pdfValue}`:`${o.label}${o.jsonValue?` → JSON ${o.jsonValue}`:""} · PDF ${o.pdfValue||"✗ sin casilla"}`).join("\n"):f.opciones.map(o=>`${o.label}${o.jsonValue?` → JSON ${o.jsonValue}`:""}`).join("\n");
+  const pre=f=>/prellen|llenado autom|disabled/i.test(f.visualizacion||"")?"sí":mpIsJsonPaso(f.paso)?"sí (sistema)":"no";
+  const DST={ok:"Coincide",dif:"Ruta distinta",none:"No está"};
+  const rows=F.map(f=>{const u=f.match&&f.match.u;const rep=mpRepOf(f,u);
+    const obs=[f.observaciones?`INS: ${f.observaciones}`:"",f.json.st==="otra"?`La ruta de la ficha no está en el JSON main; ahí está como ${f.json.alt}`:f.json.st==="no"?"La ruta de la ficha no está en el JSON main":"",f.ordNota].filter(Boolean).join("\n");
+    return{f,u,paso_web:f.paso,seccion:f.seccion,pagina_pdf:u?u.page:"",widget_pdf:u?u.miembros.join("\n"):"",tipo_widget:u?u.tipo:"",grupo:u&&(u.agrupado||u.repeater)?u.name:"",
+      label_web:f.nombreWeb,control_web:f.controlWeb,opciones:optS(f),path_json:f.campoJson,tipo_json:f.tipoJson,mapeo_web_json:f.mapeo,obligatorio_web:f.oblWeb,obligatorio_json:f.oblJson,
+      regla:f.regla,repeater:rep?`sí · ${rep}`:"no",prefill:pre(f),estado_match:f.estado,confianza:f.estado==="SEGURO"||f.estado==="DUDOSO"?f.confianza:"",senal:f.senal,
+      hoja:f.hoja,filas:f.filas.join(", "),ruta_dic:f.dic.i>=0?DIC[f.dic.i][4]:"",estado_dic:DST[f.dic.st],observaciones:obs}});
+  libres.forEach(u=>rows.push({f:null,u,paso_web:"(sin fila en la ficha)",seccion:"",pagina_pdf:u.page,widget_pdf:u.miembros.join("\n"),tipo_widget:u.tipo,grupo:u.agrupado||u.repeater?u.name:"",label_web:u.ctx&&mpNear(u.ctx.left)||"",control_web:"",
+    opciones:u.agrupado?u.opciones.map(o=>`${o.label} · PDF ${o.pdfValue}`).join("\n"):"",path_json:"",tipo_json:"",mapeo_web_json:"",obligatorio_web:"",obligatorio_json:"",regla:"",repeater:u.repeater?"sí · (sin ruta)":"no",prefill:"",
+    estado_match:"SIN_FICHA",confianza:"",senal:"casillero del PDF que no se cruzó con ninguna fila de la ficha",hoja:"",filas:"",ruta_dic:"",estado_dic:"",observaciones:""}));
+  rows.forEach((r,i)=>r.orden=i+1);
+  return rows;
+}
+/* repeater: v1.5 lo completa; acá alcanza con la ruta */
+function mpRepOf(f,u){return ""}
+
+/* ════════ Huecos: todo lo que no cierra ════════ */
+function mpHuecos(){
+  const H=[];const add=(tipo,grav,det,f,extra={})=>H.push({tipo,gravedad:grav,detalle:det,hoja:f?f.hoja:"",filas:f?f.filas.join(", "):"",widget:extra.widget||(f&&f.match?f.match.u.name:""),ruta:extra.ruta??(f?f.campoJson:""),sugerencia:extra.sug||""});
+  MP.fichaG.forEach(f=>{
+    if(f.estado==="NO_APLICA")return;
+    if(f.estado==="SIN_MATCH")add("Sin casillero en el PDF","error",`«${f.nombrePdf}» (${f.nombreWeb}) tiene nombre en el PDF pero no se encontró el casillero. ${f.senal}`,f,{sug:f.cands.length?"Candidatos: "+f.cands.slice(0,3).map(c=>`${MP.units[c.j].name} (${Math.min(1,c.s).toFixed(2)})`).join(", "):""});
+    if(f.estado==="DUDOSO")add("Cruce dudoso","aviso",`«${f.nombreWeb}» ↔ ${f.match.u.name}: ${f.senal}`,f,{sug:"Revisar y confirmar en «Resolver dudosos»"});
+    if(f.json.st==="otra")add("Ruta JSON distinta","aviso",`La ruta de la ficha no está en el JSON main`,f,{sug:`En el JSON main está como ${f.json.alt}`});
+    if(f.json.st==="no")add("Ruta JSON que no está en el JSON main","aviso",`«${f.nombreWeb}»: ${f.campoJson}`,f);
+    if(f.json.st==="vacio")add("Sin ruta JSON","error",`«${f.nombreWeb||f.nombrePdf}» no tiene «Nombre del campo en el JSON»`,f);
+    if(f.dic.st==="dif")add("Distinto al Diccionario INS","aviso",`«${f.nombreWeb}»: la ficha usa ${f.campoJson||"(sin ruta)"}`,f,{sug:`Diccionario: ${DIC[f.dic.i][0]} → ${DIC[f.dic.i][4]}`});
+    if(f.dic.st==="none"&&f.campoJson)add("No está en el Diccionario INS","info",`«${f.nombreWeb}» (${f.campoJson})`,f);
+    (f.opcMap||[]).forEach(o=>{if(o.soloPdf)add("Opción solo en el PDF","aviso",`${f.match.u.name}: la casilla «${o.pdfValue}» no tiene opción en la ficha`,f,{widget:o.widget});else if(!o.pdfValue)add("Opción sin casilla en el PDF","aviso",`«${f.nombreWeb}»: la opción «${o.label}» no tiene casilla en ${f.match.u.name}`,f)});
+  });
+  MP.units.filter(u=>u.fichaId==null).forEach(u=>add("Casillero sin fila en la ficha","error",`${u.name} (${u.tipo}, pág. ${u.page}) no se cruzó con ninguna fila`,null,{widget:u.miembros.join(", "),ruta:""}));
+  const usadas=new Set(MP.fichaG.map(f=>mpPathN(f.campoJson)).filter(Boolean));MP.fichaG.forEach(f=>{if(f.json.alt)usadas.add(f.json.alt)});
+  const vistas=new Set();
+  MP.json.paths.forEach(p=>{if(p.type==="array"||p.type==="object")return;const k=mpPathN(p.path);if(usadas.has(k)||vistas.has(k))return;vistas.add(k);add("Dato del JSON sin fila en la ficha","aviso",`${k} (ejemplo: ${typeof p.ex==="string"?p.ex:JSON.stringify(p.ex)})`,null,{ruta:k})});
+  return H;
+}
+
+/* ════════ Excel de salida: Matriz · Huecos · Preguntas_INS · Resumen ════════ */
+const MP_MCOLS=[["orden",7],["paso_web",22],["seccion",22],["pagina_pdf",8],["widget_pdf",30],["tipo_widget",12],["grupo",24],["label_web",36],["control_web",14],["opciones",34],["path_json",48],["tipo_json",12],["mapeo_web_json",30],["obligatorio_web",10],["obligatorio_json",10],["regla",36],["repeater",22],["prefill",10],["estado_match",12],["confianza",9],["senal",60],["hoja",16],["filas",10],["ruta_dic",48],["estado_dic",14],["observaciones",48]];
+const MP_MHEAD={orden:"orden",paso_web:"paso_web",seccion:"seccion",pagina_pdf:"pagina_pdf",widget_pdf:"widget_pdf",tipo_widget:"tipo_widget",grupo:"grupo",label_web:"label_web",control_web:"control_web",opciones:"opciones (WEB → JSON · PDF)",path_json:"path_json",tipo_json:"tipo_json",mapeo_web_json:"mapeo_web_json",obligatorio_web:"obligatorio_web",obligatorio_json:"obligatorio_json",regla:"regla / visibilidad",repeater:"repeater",prefill:"prefill",estado_match:"estado_match",confianza:"confianza",senal:"señal (por qué)",hoja:"hoja_ficha_origen",filas:"fila_ficha_origen",ruta_dic:"ruta_diccionario",estado_dic:"estado_diccionario",observaciones:"observaciones"};
+const MP_FILL={SEGURO:"FFE2F3EA",DUDOSO:"FFFBEFDC",SIN_MATCH:"FFFBE6E4",SIN_PDF:"FFE9ECFB",SIN_FICHA:"FFFBE6E4",error:"FFFBE6E4",aviso:"FFFBEFDC",info:"FFE9ECFB"};
+async function mpXlsx(){
+  const M=mpOrder(),H=mpHuecos();
+  const wb=new ExcelJS.Workbook();wb.creator="Signaframe · Ordenar y mapear "+MP_VERSION;
+  const sheet=(name,cols,rows,colorKey)=>{
+    const ws=wb.addWorksheet(name,{views:[{state:"frozen",ySplit:1}]});
+    ws.columns=cols.map(([k,w,h])=>({header:h||k,key:k,width:w}));
+    const hr=ws.getRow(1);hr.font={bold:true,color:{argb:"FFFFFFFF"}};hr.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF1B1F2A"}};hr.alignment={vertical:"middle",wrapText:true};hr.height=30;
+    rows.forEach(r=>{const row=ws.addRow(r);row.alignment={vertical:"top",wrapText:true};const c=colorKey&&MP_FILL[r[colorKey]];if(c)row.getCell(colorKey).fill={type:"pattern",pattern:"solid",fgColor:{argb:c}}});
+    ws.autoFilter={from:{row:1,column:1},to:{row:1,column:cols.length}};return ws;
+  };
+  const mws=sheet("Matriz",MP_MCOLS.map(([k,w])=>[k,w,MP_MHEAD[k]]),M.map(r=>{const o={};MP_MCOLS.forEach(([k])=>o[k]=r[k]??"");return o}),"estado_match");
+  mws.getColumn("confianza").numFmt="0.00";
+  sheet("Huecos",[["tipo",30],["gravedad",10],["detalle",70],["hoja",16],["filas",10],["widget",30],["ruta",48],["sugerencia",50]],H,"gravedad");
+  /* todas las filas de la ficha, tal cual, con su hoja / fila y a dónde fueron */
+  const ofRow=new Map();MP.fichaG.forEach(f=>f.filas.forEach(n=>ofRow.set(f.hoja+"|"+n,f)));
+  const ordOf=new Map(M.filter(r=>r.f).map(r=>[r.f,r.orden]));
+  const K=Object.values(FICHA_COLS);
+  sheet("Preguntas_INS",[["hoja",16],["fila",6],...K.map(k=>[k,k==="campoJson"?44:18]),["estado_match",12],["widget_pdf",28],["orden_en_matriz",10]],
+    MP.ficha.rows.map(r=>{const f=ofRow.get(r.hoja+"|"+r.fila);const o={hoja:r.hoja,fila:r.fila};K.forEach(k=>o[k]=r[k]??"");o.estado_match=f?f.estado:"";o.widget_pdf=f&&f.match?f.match.u.name:"";o.orden_en_matriz=f&&ordOf.has(f)?ordOf.get(f):"";return o}),"estado_match");
+  const cnt=k=>M.filter(r=>r.estado_match===k).length;const nW=MP.pdf.fields.reduce((a,f)=>a+f.widgets.length,0);
+  const enM=new Set(M.flatMap(r=>r.widget_pdf?r.widget_pdf.split("\n"):[]));
+  const R=[["Herramienta",`Signaframe · Ordenar y mapear ${MP_VERSION}`],["Fecha",new Date().toISOString().slice(0,16).replace("T"," ")],
+    ["PDF",MP.files.pdf.name],["JSON main",MP.files.json.name],["Ficha del INS",MP.files.xlsx.name],["Diccionario INS",`${DIC.length} campos`],[],
+    ["Widgets del PDF",nW],["Widgets en la Matriz",MP.pdf.fields.filter(f=>enM.has(f.name)).length],["Campos del PDF (agrupados)",MP.units.length],
+    ["Filas de la ficha",MP.ficha.rows.length],["Campos de la ficha (agrupados)",MP.fichaG.length],["Filas en la Matriz",M.length],[],
+    ...["SEGURO","DUDOSO","SIN_MATCH","SIN_PDF","SIN_FICHA"].map(k=>[k,cnt(k)]),["NO_APLICA (solo en Preguntas_INS)",MP.fichaG.filter(f=>f.estado==="NO_APLICA").length],[],
+    ["Huecos: errores",H.filter(h=>h.gravedad==="error").length],["Huecos: avisos",H.filter(h=>h.gravedad==="aviso").length],["Huecos: info",H.filter(h=>h.gravedad==="info").length],[],
+    ["Orden","Paso WEB (orden de la ficha) → Sección (posición en el PDF) → página → arriba→abajo → izquierda→derecha; los datos solo JSON van al final de su sección; los datos del sistema, al final."],
+    ["Estados","SEGURO: cruce claro. DUDOSO: revisar. SIN_MATCH: la ficha nombra un casillero que no se encontró. SIN_PDF: la ficha no le da casillero (solo web / JSON). SIN_FICHA: casillero sin fila en la ficha. NO_APLICA: fila sin campo (títulos, «No aplica»)."]];
+  const rs=wb.addWorksheet("Resumen");rs.columns=[{width:36},{width:110}];R.forEach(r=>{const row=rs.addRow(r);row.alignment={vertical:"top",wrapText:true};if(r[0])row.getCell(1).font={bold:true}});
+  wb.views=[{activeTab:0}];
+  const buf=await wb.xlsx.writeBuffer();
+  const base=(MP.files.pdf.name||"formulario").replace(/\.pdf$/i,"");
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));a.download=`${base}_matriz_normalizada.xlsx`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+  return{M,H};
+}
+
 /* ════════ UI ════════ */
 const inputs={pdf:"#mp-pdf",json:"#mp-json",xlsx:"#mp-xlsx"};
 Object.entries(inputs).forEach(([k,sel])=>$(sel).addEventListener("change",e=>{
@@ -592,11 +712,12 @@ $("#mp-go").addEventListener("click",async()=>{
   }catch(e){console.warn(e);m.textContent="No se pudo procesar: revisá el archivo marcado en rojo."}
   finally{$("#mp-go").disabled=false}
 });
-let MP_TAB="res";
+let MP_TAB="mat";
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{MP_TAB=b.dataset.tab;document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));mpTable()}));
 $("#mp-q").addEventListener("input",()=>mpTable());
 $("#mp-grp").addEventListener("change",()=>mpTable());
 $("#mp-est").addEventListener("change",()=>mpTable());
+$("#mp-dl").addEventListener("click",async()=>{const m=$("#mp-msg");try{const r=await mpXlsx();m.textContent=`Matriz bajada: ${r.M.length} filas · ${r.H.length} huecos.`}catch(e){console.warn(e);m.textContent="No se pudo armar el Excel."}});
 function mpRender(){
   const P=MP.pdf,J=MP.json,F=MP.ficha;
   const byFt=P.fields.reduce((a,f)=>(a[f.ft]=(a[f.ft]||0)+1,a),{});
@@ -615,9 +736,13 @@ function mpTable(){
   const q=($("#mp-q").value||"").trim().toLowerCase();const hit=a=>!q||a.some(x=>String(x??"").toLowerCase().includes(q));
   let head=[],rows=[];const G=$("#mp-grp").checked;
   const optTxt=os=>os.map(o=>`${esc(o.label??o.pdfValue)}${o.jsonValue?` <span class="mono">→ ${esc(o.jsonValue)}</span>`:""}${o.widget&&o.widget!==o.label?` <span class="mono" style="color:var(--muted)">(${esc(o.widget)})</span>`:""}`).join("<br>");
-  const E=$("#mp-est").value;$("#mp-est").hidden=MP_TAB!=="res";$("#mp-grp").parentNode.hidden=!(MP_TAB==="pdf"||MP_TAB==="ficha");
+  const E=$("#mp-est").value;$("#mp-est").hidden=!(MP_TAB==="res"||MP_TAB==="mat");$("#mp-grp").parentNode.hidden=!(MP_TAB==="pdf"||MP_TAB==="ficha");
   const JST={ok:"✓",otra:"≠ otra ruta",no:"✗ no está",vacio:"—",na:""};
-  if(MP_TAB==="res"){head=["Estado","Conf.","Hoja · filas","Nombre en formulario","Nombre en PDF (ficha)","Casillero del PDF","Opciones (WEB → JSON · PDF)","Campo en el JSON","Diccionario INS","Por qué"];
+  if(MP_TAB==="mat"){head=["#","Paso WEB","Sección","Pág.","Casillero del PDF","Nombre en formulario","Opciones (WEB → JSON · PDF)","Campo en el JSON","Prefill","Estado","Conf.","Origen"];
+    rows=mpOrder().filter(r=>(!E||r.estado_match===E)&&hit(Object.values(r))).map(r=>[r.orden,esc(r.paso_web),esc(r.seccion),r.pagina_pdf,`<span class="mono">${esc(r.grupo||r.widget_pdf)}</span>${r.tipo_widget?` <span class="tag">${esc(r.tipo_widget)}</span>`:""}`,esc(r.label_web),esc(r.opciones).replace(/\n/g,"<br>"),`<span class="mono">${esc(r.path_json)}</span>`,esc(r.prefill),`<span class="est ${r.estado_match}">${r.estado_match}</span>`,r.confianza!==""?(+r.confianza).toFixed(2):"",r.hoja?`${esc(r.hoja)} · ${r.filas}`:""])}
+  else if(MP_TAB==="hue"){head=["Tipo","Gravedad","Detalle","Origen","Casillero","Ruta","Sugerencia"];
+    rows=mpHuecos().filter(h=>hit(Object.values(h))).map(h=>[esc(h.tipo),`<span class="est ${h.gravedad==="error"?"SIN_MATCH":h.gravedad==="aviso"?"DUDOSO":"SIN_PDF"}">${h.gravedad}</span>`,esc(h.detalle),h.hoja?`${esc(h.hoja)} · ${h.filas}`:"",`<span class="mono">${esc(h.widget)}</span>`,`<span class="mono">${esc(h.ruta)}</span>`,esc(h.sugerencia)])}
+  else if(MP_TAB==="res"){head=["Estado","Conf.","Hoja · filas","Nombre en formulario","Nombre en PDF (ficha)","Casillero del PDF","Opciones (WEB → JSON · PDF)","Campo en el JSON","Diccionario INS","Por qué"];
     rows=MP.fichaG.filter(f=>(!E||f.estado===E)&&hit([f.estado,f.hoja,f.nombreWeb,f.nombrePdf,f.campoJson,f.match&&f.match.u.name,f.senal])).map(f=>[`<span class="est ${f.estado}">${f.estado}</span>`,f.confianza!=null&&f.estado!=="NO_APLICA"?f.confianza.toFixed(2):"",`${esc(f.hoja)} · ${f.filas.join(", ")}`,esc(f.nombreWeb),esc(f.nombrePdf),
       f.match?`<span class="mono">${esc(f.match.u.name)}</span> <span class="tag">${esc(f.match.u.tipo)} · p${f.match.u.page}</span>${f.match.u.repeater?` <span class="tag arr">repite ×${f.match.u.repeater.filas.length}</span>`:""}`:"",
       f.opcMap?f.opcMap.map(o=>`${o.soloPdf?'<span class="tag">solo PDF</span>':esc(o.label)}${o.jsonValue?` <span class="mono">→ ${esc(o.jsonValue)}</span>`:""} · <span class="mono">${o.pdfValue?esc(o.pdfValue):"✗"}</span>`).join("<br>"):optTxt(f.opciones),
