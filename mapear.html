@@ -1,0 +1,268 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>Ordenar y mapear</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+:root{
+  --bg:#f5f6f8; --paper:#ffffff; --ink:#1b1f2a; --muted:#5d6475; --line:#dde1e8; --soft:#eceff4;
+  --form:#3346c8; --form-bg:#e9ecfb; --pdf:#a35a00; --pdf-bg:#fbefdc; --json:#17784f; --json-bg:#e2f3ea;
+  --warn:#b4231d; --warn-bg:#fbe6e4; --ok:#17784f; --info:#5b2db8; --info-bg:#f1ebfc;
+  --sans:"Instrument Sans",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12151c; --paper:#1a1e27; --ink:#e7e9ef; --muted:#9aa1b2; --line:#2c3240; --soft:#222733;
+  --form:#9aa8ff; --form-bg:#252c52; --pdf:#f0b25e; --pdf-bg:#3a2a12; --json:#6fd3a3; --json-bg:#13362a;
+  --warn:#ff8a80; --warn-bg:#3d1c1a; --ok:#6fd3a3; --info:#c4a8ff; --info-bg:#2b2440; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12151c; --paper:#1a1e27; --ink:#e7e9ef; --muted:#9aa1b2; --line:#2c3240; --soft:#222733;
+  --form:#9aa8ff; --form-bg:#252c52; --pdf:#f0b25e; --pdf-bg:#3a2a12; --json:#6fd3a3; --json-bg:#13362a;
+  --warn:#ff8a80; --warn-bg:#3d1c1a; --ok:#6fd3a3; --info:#c4a8ff; --info-bg:#2b2440; color-scheme:dark}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font:15px/1.6 var(--sans);padding-inline:16px;padding-block:28px 64px;margin:0}
+.wrap{max-width:1180px;margin:0 auto;display:grid;gap:28px}
+h1{font-size:32px;line-height:1.15;margin:0 0 8px;font-weight:600;letter-spacing:-.01em}
+h2{font-size:20px;margin:0 0 6px;font-weight:600}
+.lead{color:var(--muted);max-width:72ch;font-size:16px;margin:0}
+.eyebrow{font:500 12px var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.eyebrow a{color:inherit}
+.ver{font:500 11px var(--mono);background:var(--soft);border-radius:4px;padding:1px 6px;margin-left:6px;vertical-align:middle}
+.card{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:16px}
+.inputs{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px}
+.fin{display:grid;gap:6px;padding:12px;border:1px dashed var(--line);border-radius:8px;background:var(--bg)}
+.fin b{font-weight:600}
+.fin .hint{color:var(--muted);font-size:13px}
+.fin input{font:13px var(--sans);max-width:100%}
+.fin .st{font:12px var(--mono);color:var(--muted);min-height:1.4em;overflow-wrap:anywhere}
+.fin .st.ok{color:var(--ok)}.fin .st.bad{color:var(--warn)}
+button.btn{font:500 14px var(--sans);padding:8px 14px;border-radius:7px;border:1px solid var(--line);background:var(--paper);color:var(--ink);cursor:pointer}
+button.btn:hover{border-color:var(--muted)}
+button.btn.pri{background:var(--form);border-color:var(--form);color:#fff}
+button.btn:disabled{opacity:.5;cursor:not-allowed}
+button.btn:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--form);outline-offset:1px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.msg{color:var(--muted);font-size:14px;margin:0}
+.stats{display:flex;flex-wrap:wrap;gap:8px}
+.stats span{background:var(--soft);border-radius:999px;padding:3px 10px;font-size:13px}
+.stats b{font-weight:600}
+.warns{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.warns li{font-size:13px;border-radius:6px;padding:6px 10px;background:var(--info-bg);color:var(--info)}
+.warns li.w{background:var(--pdf-bg);color:var(--pdf)}
+.warns li.e{background:var(--warn-bg);color:var(--warn)}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:8px}
+.tabs button{font:500 14px var(--sans);border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:7px;padding:6px 12px;cursor:pointer}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--paper);border-color:var(--ink)}
+.tbox{max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+th{position:sticky;top:0;background:var(--soft);font:600 12px var(--sans);text-transform:uppercase;letter-spacing:.03em;color:var(--muted);z-index:1}
+td.mono,.mono{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
+.tag{display:inline-block;font:500 11px var(--mono);border-radius:4px;padding:0 5px;background:var(--soft);color:var(--muted)}
+.tag.tx{background:var(--form-bg);color:var(--form)}
+.tag.btn{background:var(--pdf-bg);color:var(--pdf)}
+.tag.arr{background:var(--json-bg);color:var(--json)}
+.tag.ph{background:var(--info-bg);color:var(--info)}
+.filters{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:10px 0}
+.filters input{font:14px var(--sans);padding:6px 10px;border:1px solid var(--line);border-radius:7px;background:var(--paper);color:var(--ink);min-width:240px}
+.empty{padding:14px;color:var(--muted)}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<main class="wrap">
+<header>
+  <div class="eyebrow"><a href="./">Signaframe · Ficha de formulario</a> · paso opcional</div>
+  <h1>Ordenar y mapear <span class="ver" id="mp-ver"></span></h1>
+  <p class="lead">Cuando el INS manda su matriz (la ficha en Excel), este paso la cruza con el PDF y el JSON main, la contrasta con el Diccionario INS y arma una matriz normalizada con nuestro orden, más un reporte de lo que no cierra. Solo lee los archivos: no cambia el PDF. Todo se procesa en tu navegador.</p>
+</header>
+
+<section class="card" aria-labelledby="mp-in-h">
+  <h2 id="mp-in-h">Archivos</h2>
+  <div class="inputs">
+    <label class="fin"><b>PDF del formulario</b><span class="hint">Con los casilleros ya renombrados.</span><input type="file" id="mp-pdf" accept=".pdf,application/pdf"><span class="st" id="mp-pdf-st"></span></label>
+    <label class="fin"><b>JSON main</b><span class="hint">El JSON de ejemplo de salida / entrada.</span><input type="file" id="mp-json" accept=".json,application/json"><span class="st" id="mp-json-st"></span></label>
+    <label class="fin"><b>Ficha del INS (.xlsx)</b><span class="hint">La matriz armada por el INS.</span><input type="file" id="mp-xlsx" accept=".xlsx"><span class="st" id="mp-xlsx-st"></span></label>
+  </div>
+  <div class="bar" style="margin-top:12px"><button class="btn pri" id="mp-go" disabled>Procesar</button><p class="msg" id="mp-msg" aria-live="polite">Cargá los tres archivos.</p></div>
+</section>
+
+<section class="card" id="mp-out" hidden aria-labelledby="mp-out-h">
+  <h2 id="mp-out-h">Lo que se leyó</h2>
+  <div class="stats" id="mp-stats"></div>
+  <ul class="warns" id="mp-warns" style="margin-top:10px"></ul>
+  <div class="tabs" role="tablist" style="margin-top:14px">
+    <button role="tab" data-tab="pdf" aria-selected="true">PDF</button>
+    <button role="tab" data-tab="json" aria-selected="false">JSON main</button>
+    <button role="tab" data-tab="ficha" aria-selected="false">Ficha del INS</button>
+    <button role="tab" data-tab="estr" aria-selected="false">Estructura base JSON</button>
+  </div>
+  <div class="filters"><input type="search" id="mp-q" placeholder="Buscar en la tabla…" aria-label="Buscar en la tabla"><span class="msg" id="mp-qn"></span></div>
+  <div class="tbox" id="mp-table"></div>
+</section>
+</main>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf-lib/1.17.1/pdf-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+<script>
+"use strict";
+const MP_VERSION="v1.0.0";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const slug=t=>String(t||"").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
+const MP={pdf:null,json:null,ficha:null,files:{}};
+$("#mp-ver").textContent=MP_VERSION;
+
+/* ════════ PDF: recorrido crudo de /AcroForm/Fields (pdf-lib de alto nivel falla con campos jerárquicos) ════════ */
+async function mpReadPdf(bytes){
+  const {PDFDocument,PDFName,PDFDict,PDFArray,PDFRef,PDFNumber}=PDFLib;
+  const doc=await PDFDocument.load(bytes,{ignoreEncryption:true,updateMetadata:false});
+  const ctx=doc.context;const L=o=>o instanceof PDFRef?ctx.lookup(o):o;const N=n=>PDFName.of(n);
+  const txt=o=>{o=L(o);if(o==null)return"";if(typeof o.decodeText==="function")return o.decodeText();return String(o)};
+  const nm=o=>{o=L(o);if(!o)return"";return typeof o.decodeText==="function"?o.decodeText():String(o).replace(/^\//,"")};
+  const pages=doc.getPages();const refPage=new Map();
+  pages.forEach((p,i)=>{const an=L(p.node.get(N("Annots")));if(an instanceof PDFArray)an.asArray().forEach(r=>{if(r instanceof PDFRef)refPage.set(r.toString(),i+1)})});
+  const pageOfRef=new Map(pages.map((p,i)=>[p.ref.toString(),i+1]));
+  const acro=L(doc.catalog.get(N("AcroForm")));
+  const out=[],warns=[];
+  if(!(acro instanceof PDFDict)){warns.push({k:"e",t:"El PDF no tiene formulario (AcroForm)."});return{fields:out,pages:pages.length,warns}}
+  const widget=(ref,d)=>{
+    const r=L(d.get(N("Rect")));const rect=r instanceof PDFArray?r.asArray().map(x=>L(x).asNumber()):null;
+    let page=ref instanceof PDFRef?refPage.get(ref.toString()):null;
+    if(!page){const p=d.get(N("P"));if(p instanceof PDFRef)page=pageOfRef.get(p.toString())}
+    const ap=L(d.get(N("AP")));let states=[];
+    if(ap instanceof PDFDict){const n=L(ap.get(N("N")));if(n instanceof PDFDict)states=n.keys().map(k=>nm(k)).filter(s=>s!=="Off")}
+    return{page:page||null,rect,states};
+  };
+  const visit=(ref,parent,depth)=>{
+    const d=L(ref);if(!(d instanceof PDFDict)||depth>40)return;
+    const t=d.get(N("T"));const part=t?txt(t):"";
+    const me={name:part?(parent.name?parent.name+"."+part:part):parent.name,
+      ft:d.get(N("FT"))?nm(d.get(N("FT"))):parent.ft,
+      ff:d.get(N("Ff"))?L(d.get(N("Ff"))).asNumber():parent.ff,
+      opt:d.get(N("Opt"))?L(d.get(N("Opt"))):parent.opt,
+      tu:d.get(N("TU"))?txt(d.get(N("TU"))):parent.tu};
+    const kids=L(d.get(N("Kids")));
+    if(kids instanceof PDFArray){
+      const ks=kids.asArray();
+      if(ks.some(k=>{const kd=L(k);return kd instanceof PDFDict&&kd.has(N("T"))})){ks.forEach(k=>visit(k,me,depth+1));return}
+      out.push(field(me,ks.map(k=>widget(k,L(k)))));return;
+    }
+    out.push(field(me,[widget(ref,d)]));
+  };
+  const field=(f,ws)=>{
+    const ff=f.ff||0;const tipo=f.ft==="Btn"?(ff&(1<<15)?"radio":ff&(1<<16)?"boton":"casilla"):f.ft==="Tx"?"texto":f.ft==="Ch"?"lista":f.ft==="Sig"?"firma":(f.ft||"?");
+    let opts=[];if(f.opt instanceof PDFLib.PDFArray)opts=f.opt.asArray().map(o=>{o=L(o);return o instanceof PDFLib.PDFArray?txt(o.get(1)||o.get(0)):txt(o)});
+    const states=[...new Set(ws.flatMap(w=>w.states))];
+    return{name:f.name,ft:f.ft||"?",tipo,label:f.tu||"",widgets:ws,page:ws[0]&&ws[0].page,rect:ws[0]&&ws[0].rect,states,opts};
+  };
+  const fields=L(acro.get(N("Fields")));
+  if(fields instanceof PDFArray)fields.asArray().forEach(r=>visit(r,{name:"",ft:"",ff:0,opt:null,tu:""},0));
+  if(!out.length)warns.push({k:"e",t:"El formulario del PDF no tiene campos."});
+  return{fields:out,pages:pages.length,warns};
+}
+
+/* ════════ JSON main: rutas aplanadas con tipo; arrays = repeaters ════════ */
+function mpReadJson(text){
+  const o=JSON.parse(text);const paths=[],arrays=[],warns=[];
+  const type=v=>v===null?"null":Array.isArray(v)?"array":typeof v;
+  const walk=(v,p,inArr)=>{
+    if(Array.isArray(v)){arrays.push({path:p,len:v.length});paths.push({path:p,type:"array",len:v.length,repeater:true,inArr});v.forEach((el,i)=>walk(el,`${p}[${i}]`,p));return}
+    if(v&&typeof v==="object"){const ks=Object.keys(v);if(!ks.length)paths.push({path:p,type:"object",ex:"{}",inArr});ks.forEach(k=>walk(v[k],p?p+"."+k:k,inArr));return}
+    paths.push({path:p,type:type(v),ex:v,inArr,placeholder:typeof v==="string"&&/^<[^<>]+>$/.test(v.trim())});
+  };
+  walk(o,"",null);
+  if(o&&o.datosFormulario&&o.datosFormulario.datosGenerales)warns.push({k:"w",t:"El JSON trae datosFormulario.datosGenerales (no es la convención v8 sin datosGenerales). Se toma como advertencia, no como error."});
+  return{data:o,paths,arrays,warns};
+}
+
+/* ════════ Ficha del INS: todas las hojas a una tabla, con hoja y fila de origen ════════ */
+const FICHA_COLS={pasos_formulario:"paso",seccion:"seccion",nombre_en_pdf:"nombrePdf",nombre_del_campo_en_formulario:"nombreWeb",tipo_de_control_web:"controlWeb",valores_mostrados_web:"valoresWeb",tipo_de_dato_json:"tipoJson",mapeo_web_json:"mapeo",regla:"regla",obligatorio_web:"oblWeb",obligatorio_json:"oblJson",formulario_a_visualizar:"formulario",visualizacion_en_formularios:"visualizacion",observaciones:"observaciones",nombre_de_la_seccion_del_json:"seccionJson",nombre_del_campo_en_el_json:"campoJson",nombre_interno_del_campo_en_pdf:"nombreInternoPdf"};
+async function mpReadFicha(buf){
+  const wb=new ExcelJS.Workbook();await wb.xlsx.load(buf);
+  const rows=[],sheets=[],estructura=[],warns=[];
+  const ct=c=>{const v=c.value;if(v==null)return"";if(typeof v==="object"){if(v.richText)return v.richText.map(x=>x.text).join("").trim();if("result" in v)return String(v.result??"").trim();if(v.text)return String(v.text).trim();if(v instanceof Date)return v.toISOString().slice(0,10)}return String(v).trim()};
+  wb.eachSheet(ws=>{
+    if(slug(ws.name)==="estructura_base_json"){
+      ws.eachRow((row,r)=>{if(r===1)return;const nodo=ct(row.getCell(1));if(!nodo)return;estructura.push({nodo,paso:ct(row.getCell(2)),seccion:ct(row.getCell(3)),fila:r})});
+      sheets.push({name:ws.name,rows:0,indice:true});return;
+    }
+    let hr=0,hc=0;
+    for(let r=1;r<=25&&!hr;r++){const row=ws.getRow(r);for(let c=1;c<=Math.max(30,ws.columnCount);c++){if(slug(ct(row.getCell(c)))==="pasos_formulario"){hr=r;hc=c;break}}}
+    if(!hr){warns.push({k:"w",t:`Hoja «${ws.name}»: no encontré la fila de encabezado («Pasos Formulario»). No se leyó.`});sheets.push({name:ws.name,rows:0,noHeader:true});return}
+    const map={};const head=ws.getRow(hr);
+    for(let c=1;c<=Math.max(30,ws.columnCount);c++){const k=FICHA_COLS[slug(ct(head.getCell(c)))];if(k&&!(k in map))map[k]=c}
+    const missing=Object.values(FICHA_COLS).filter(k=>!(k in map));
+    if(missing.length)warns.push({k:"w",t:`Hoja «${ws.name}»: faltan columnas: ${missing.join(", ")}.`});
+    if(hc!==1)warns.push({k:"i",t:`Hoja «${ws.name}»: el encabezado está corrido (empieza en la columna ${String.fromCharCode(64+hc)}); se leyó por nombre de columna.`});
+    let n=0;
+    for(let r=hr+1;r<=ws.rowCount;r++){
+      const row=ws.getRow(r);const rec={hoja:ws.name,fila:r};let any=false;
+      for(const[k,c]of Object.entries(map)){const v=ct(row.getCell(c));rec[k]=v;if(v)any=true}
+      if(!any)continue;
+      rec.placeholders=Object.values(rec).filter(v=>typeof v==="string"&&/<[^<>]+>/.test(v)).length;
+      rows.push(rec);n++;
+    }
+    sheets.push({name:ws.name,rows:n,headerRow:hr,headerCol:hc});
+  });
+  const na=v=>/^no aplica$/i.test(v||"");
+  rows.forEach(r=>{r.sinPdf=na(r.nombreInternoPdf)||na(r.nombrePdf)});
+  const vacios=rows.filter(r=>!r.nombreInternoPdf).length,noAp=rows.filter(r=>na(r.nombreInternoPdf)).length;
+  if(rows.length&&vacios)warns.push({k:"i",t:`«Nombre interno del campo en PDF» viene vacío en ${vacios} de ${rows.length} filas${noAp?` y dice «No aplica» en ${noAp}`:""}: el vínculo ficha ↔ casillero se arma en el cruce.`});
+  if(!estructura.length)warns.push({k:"w",t:"No encontré la hoja «Estructura base JSON» (índice de pasos y secciones)."});
+  return{rows,sheets,estructura,warns};
+}
+
+/* ════════ UI ════════ */
+const inputs={pdf:"#mp-pdf",json:"#mp-json",xlsx:"#mp-xlsx"};
+Object.entries(inputs).forEach(([k,sel])=>$(sel).addEventListener("change",e=>{
+  const f=e.target.files[0];MP.files[k]=f||null;const st=$(sel+"-st");st.className="st"+(f?" ok":"");st.textContent=f?`${f.name} · ${(f.size/1024).toFixed(0)} KB`:"";
+  const n=Object.values(MP.files).filter(Boolean).length;$("#mp-go").disabled=n<3;$("#mp-msg").textContent=n<3?`Faltan ${3-n} archivo${3-n>1?"s":""}.`:"Listo para procesar.";
+}));
+$("#mp-go").addEventListener("click",async()=>{
+  const m=$("#mp-msg");m.textContent="Procesando…";$("#mp-go").disabled=true;
+  const fail=(k,e)=>{const st=$(inputs[k]+"-st");st.className="st bad";st.textContent=e};
+  try{
+    try{MP.pdf=await mpReadPdf(new Uint8Array(await MP.files.pdf.arrayBuffer()))}catch(e){fail("pdf","No se pudo leer el PDF.");throw e}
+    try{MP.json=mpReadJson(await MP.files.json.text())}catch(e){fail("json","No es un JSON válido.");throw e}
+    try{MP.ficha=await mpReadFicha(await MP.files.xlsx.arrayBuffer())}catch(e){fail("xlsx","No se pudo leer el Excel.");throw e}
+    mpRender();m.textContent="Listo.";
+  }catch(e){console.warn(e);m.textContent="No se pudo procesar: revisá el archivo marcado en rojo."}
+  finally{$("#mp-go").disabled=false}
+});
+let MP_TAB="pdf";
+document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{MP_TAB=b.dataset.tab;document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));mpTable()}));
+$("#mp-q").addEventListener("input",()=>mpTable());
+function mpRender(){
+  const P=MP.pdf,J=MP.json,F=MP.ficha;
+  const byFt=P.fields.reduce((a,f)=>(a[f.ft]=(a[f.ft]||0)+1,a),{});
+  const nW=P.fields.reduce((a,f)=>a+f.widgets.length,0);
+  $("#mp-stats").innerHTML=[
+    `<span><b>${P.fields.length}</b> campos en el PDF (${Object.entries(byFt).map(([k,v])=>`${v} /${esc(k)}`).join(", ")}) · <b>${nW}</b> widgets · ${P.pages} págs.</span>`,
+    `<span><b>${J.paths.filter(p=>p.type!=="array").length}</b> datos en el JSON · <b>${J.arrays.length}</b> listas (repeaters)</span>`,
+    `<span><b>${F.rows.length}</b> filas en la ficha · ${F.sheets.filter(s=>s.rows).length} hojas con datos</span>`].join("");
+  const ws=[...P.warns,...J.warns,...F.warns];
+  $("#mp-warns").innerHTML=ws.map(w=>`<li class="${w.k==="e"?"e":w.k==="w"?"w":""}">${esc(w.t)}</li>`).join("");
+  $("#mp-out").hidden=false;mpTable();
+}
+function mpTable(){
+  const q=($("#mp-q").value||"").trim().toLowerCase();const hit=a=>!q||a.some(x=>String(x??"").toLowerCase().includes(q));
+  let head=[],rows=[];
+  if(MP_TAB==="pdf"){head=["#","Nombre del campo","Tipo","Pág.","Posición (x, y)","Widgets","Valores / opciones","Rótulo (TU)"];
+    rows=MP.pdf.fields.map((f,i)=>[i+1,`<span class="mono">${esc(f.name)}</span>`,`<span class="tag ${f.ft==="Tx"?"tx":"btn"}">/${esc(f.ft)}</span> ${esc(f.tipo)}`,f.page??"—",f.rect?`${Math.round(f.rect[0])}, ${Math.round(f.rect[3])}`:"—",f.widgets.length,esc([...f.states,...f.opts].join(" · ")),esc(f.label)]).filter((r,i)=>hit([MP.pdf.fields[i].name,MP.pdf.fields[i].tipo,MP.pdf.fields[i].label]))}
+  else if(MP_TAB==="json"){head=["Ruta","Tipo","Ejemplo"];
+    rows=MP.json.paths.filter(p=>hit([p.path,p.type,p.ex])).map(p=>[`<span class="mono">${esc(p.path)}</span>${p.inArr?` <span class="tag arr" title="Dentro de ${esc(p.inArr)}">en lista</span>`:""}`,p.type==="array"?`<span class="tag arr">lista · ${p.len}</span>`:esc(p.type),p.type==="array"?"":`${esc(typeof p.ex==="string"?p.ex:JSON.stringify(p.ex))}${p.placeholder?' <span class="tag ph">dato del cliente</span>':""}`])}
+  else if(MP_TAB==="ficha"){head=["Hoja","Fila","Paso","Sección","Nombre en formulario","Nombre en PDF","Control WEB","Valores WEB","Tipo JSON","Campo en el JSON","Nombre interno PDF"];
+    rows=MP.ficha.rows.filter(r=>hit(Object.values(r))).map(r=>[esc(r.hoja),r.fila,esc(r.paso),esc(r.seccion),esc(r.nombreWeb),esc(r.nombrePdf),esc(r.controlWeb),esc(r.valoresWeb),esc(r.tipoJson),`<span class="mono">${esc(r.campoJson)}</span>`,r.nombreInternoPdf?(/^no aplica$/i.test(r.nombreInternoPdf)?'<span class="tag">no aplica</span>':`<span class="mono">${esc(r.nombreInternoPdf)}</span>`):'<span class="tag">vacío</span>'])}
+  else{head=["Nodo del JSON","Paso del formulario","Sección","Fila"];
+    rows=MP.ficha.estructura.filter(e=>hit([e.nodo,e.paso,e.seccion])).map(e=>[`<span class="mono">${esc(e.nodo)}</span>`,esc(e.paso),esc(e.seccion),e.fila])}
+  $("#mp-qn").textContent=`${rows.length} filas`;
+  $("#mp-table").innerHTML=rows.length?`<table><thead><tr>${head.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`:'<p class="empty">Nada para mostrar.</p>';
+}
+</script>
+</body>
+</html>
