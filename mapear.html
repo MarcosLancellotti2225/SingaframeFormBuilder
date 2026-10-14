@@ -72,6 +72,30 @@ td.mono,.mono{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
 .filters label{display:inline-flex;gap:6px;align-items:center}
 .filters input[type=search]{font:14px var(--sans);padding:6px 10px;border:1px solid var(--line);border-radius:7px;background:var(--paper);color:var(--ink);min-width:240px}
 .empty{padding:14px;color:var(--muted)}
+.tbox.dudbox{max-height:none;overflow:visible;border:0;background:none}
+.dud{display:grid;grid-template-columns:minmax(220px,300px) 1fr;gap:14px;align-items:start}
+.dud>*{min-width:0}
+.dud-list{list-style:none;margin:0;padding:0;display:grid;gap:6px;max-height:78vh;overflow:auto}
+.dud-it{width:100%;text-align:left;font:13px/1.4 var(--sans);border:1px solid var(--line);background:var(--paper);color:var(--ink);border-radius:8px;padding:8px 10px;cursor:pointer}
+.dud-it.on{border-color:var(--form);box-shadow:0 0 0 1px var(--form)}
+.dud-view{display:grid;gap:10px}
+.dud-head{display:grid;gap:6px;border:1px solid var(--line);border-radius:8px;padding:10px 12px;background:var(--paper)}
+.dud-btns{display:flex;flex-wrap:wrap;gap:6px}
+.dud-btns .btn{font-size:13px;padding:6px 10px}
+.dud-btns .btn.cur{border-color:var(--form);background:var(--form-bg)}
+button.btn.sm{padding:3px 10px;font-size:13px}
+.num{display:inline-grid;place-items:center;min-width:18px;height:18px;border-radius:9px;background:var(--pdf);color:#fff;font:600 11px var(--mono)}
+.dud-pdf{position:relative;max-height:78vh;overflow:auto;border:1px solid var(--line);border-radius:8px;background:#fff}
+.dud-pdf canvas{display:block}
+.dud-ov{position:absolute;left:0;top:0}
+.ov{position:absolute;padding:0;margin:0;border:1px solid rgba(51,70,200,.25);background:rgba(51,70,200,.04);cursor:pointer;border-radius:2px}
+.ov:hover{background:rgba(51,70,200,.18)}
+.ov.cand{border:2px dashed #a35a00;background:rgba(240,178,94,.22)}
+.ov.cur{border:2px solid #3346c8;background:rgba(51,70,200,.25)}
+.ov .num{position:absolute;left:-10px;top:-10px}
+.lg{display:inline-block;width:14px;height:10px;vertical-align:middle;border-radius:2px;margin:0 2px 0 6px}
+.lg.cur{border:2px solid #3346c8;background:rgba(51,70,200,.25)}.lg.cand{border:2px dashed #a35a00;background:rgba(240,178,94,.22)}
+@media (max-width:760px){.dud{grid-template-columns:1fr}.dud-list{max-height:30vh}}
 .filters select{font:14px var(--sans);padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--paper);color:var(--ink)}
 .est{display:inline-block;font:600 11px var(--mono);border-radius:4px;padding:1px 6px;white-space:nowrap}
 .est.SEGURO{background:var(--json-bg);color:var(--json)}.est.DUDOSO{background:var(--pdf-bg);color:var(--pdf)}.est.SIN_MATCH{background:var(--warn-bg);color:var(--warn)}
@@ -105,6 +129,7 @@ td.mono,.mono{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
   <div class="tabs" role="tablist" style="margin-top:14px">
     <button role="tab" data-tab="mat" aria-selected="true">Matriz ordenada</button>
     <button role="tab" data-tab="res" aria-selected="false">Resultado del cruce</button>
+    <button role="tab" data-tab="dud" aria-selected="false">Resolver dudosos</button>
     <button role="tab" data-tab="hue" aria-selected="false">Huecos</button>
     <button role="tab" data-tab="pdf" aria-selected="false">PDF</button>
     <button role="tab" data-tab="json" aria-selected="false">JSON main</button>
@@ -121,7 +146,7 @@ td.mono,.mono{font-family:var(--mono);font-size:12px;overflow-wrap:anywhere}
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script>
 "use strict";
-const MP_VERSION="v1.3.0";
+const MP_VERSION="v1.4.0";
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const slug=t=>String(t||"").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
@@ -535,6 +560,12 @@ function mpScore(f,u){
   else notes.push(`tipo compatible (${f.controlWeb||"?"} ↔ ${u.tipo})`);
   return{s:Math.round(s*100)/100,why:best.why,notes};
 }
+/* opciones: ficha (label → JSON) ↔ PDF (valor de la casilla) */
+function mpOptMap(f){
+  f.opcMap=null;const u=f.match&&f.match.u;if(!u)return;
+  if(u.agrupado){const pdf=u.opciones;f.opcMap=(f.opciones.length?f.opciones:pdf.map(o=>({label:o.label}))).map(o=>{const L=slug(o.label);const p=pdf.find(x=>slug(x.label)===L||slug(x.pdfValue)===L||(L.length>2&&(slug(x.pdfValue).startsWith(L)||L.startsWith(slug(x.pdfValue)))));return{label:o.label,jsonValue:o.jsonValue||"",pdfValue:p?p.pdfValue:"",widget:p?p.widget:""}});
+    const sobran=pdf.filter(p=>!f.opcMap.some(o=>o.pdfValue===p.pdfValue));sobran.forEach(p=>f.opcMap.push({label:"",jsonValue:"",pdfValue:p.pdfValue,widget:p.widget,soloPdf:true}))}
+}
 function mpMatch(){
   const units=MP.units,F=MP.fichaG;
   const jset=new Map();MP.json.paths.forEach(p=>{if(p.type==="array")return;const k=mpPathN(p.path);if(!jset.has(k))jset.set(k,p)});
@@ -566,9 +597,7 @@ function mpMatch(){
     f.margen=Math.round((m.s-alt)*100)/100;
     f.estado=m.s>=.55&&f.margen>=.1&&f.esperaPdf?"SEGURO":"DUDOSO";
     f.senal=m.why+" · "+m.notes.join(" · ")+(f.estado==="DUDOSO"?(f.esperaPdf?(m.s<.55?" · puntaje bajo":` · margen chico (${f.margen}) con otro candidato`):" · la ficha no le da nombre en el PDF"):"");
-    /* opciones: ficha (label → JSON) ↔ PDF (valor de la casilla) */
-    if(u.agrupado){const pdf=u.opciones;f.opcMap=(f.opciones.length?f.opciones:pdf.map(o=>({label:o.label}))).map(o=>{const L=slug(o.label);const p=pdf.find(x=>slug(x.label)===L||slug(x.pdfValue)===L||(L.length>2&&(slug(x.pdfValue).startsWith(L)||L.startsWith(slug(x.pdfValue)))));return{label:o.label,jsonValue:o.jsonValue||"",pdfValue:p?p.pdfValue:"",widget:p?p.widget:""}});
-      const sobran=pdf.filter(p=>!f.opcMap.some(o=>o.pdfValue===p.pdfValue));sobran.forEach(p=>f.opcMap.push({label:"",jsonValue:"",pdfValue:p.pdfValue,widget:p.widget,soloPdf:true}))}
+    mpOptMap(f);
   });
   units.forEach((u,j)=>{u.fichaId=uUsed.has(j)?uUsed.get(j):null});
 }
@@ -707,8 +736,8 @@ $("#mp-go").addEventListener("click",async()=>{
     MP.pdf.fields.forEach(f=>{f.ctx=mpCtx(MP.text.items,f.page,f.rect)});
     MP.pdfG=mpGroupPdf(MP.pdf.fields);MP.pdfG.forEach(g=>{const m=MP.pdf.fields.filter(f=>g.miembros.includes(f.name));const first=m.reduce((a,f)=>!a||(f.rect&&a.rect&&f.rect[0]<a.rect[0])?f:a,null);g.ctx=first?first.ctx:{left:"",above:"",right:""};g.optTxt=m.map(f=>f.ctx.right)});
     MP.fichaG=mpGroupFicha(MP.ficha.rows);
-    MP.units=mpCollapseRep(MP.pdfG);mpMatch();
-    mpRender();m.textContent="Listo.";
+    MP.units=mpCollapseRep(MP.pdfG);mpMatch();MP.pred=mpPredApply();MP_DUD=null;
+    mpRender();m.textContent=MP.pred?`Listo. Se aplicaron ${MP.pred} predeterminados guardados para ${mpFormKey()}.`:"Listo.";
   }catch(e){console.warn(e);m.textContent="No se pudo procesar: revisá el archivo marcado en rojo."}
   finally{$("#mp-go").disabled=false}
 });
@@ -738,6 +767,8 @@ function mpTable(){
   const optTxt=os=>os.map(o=>`${esc(o.label??o.pdfValue)}${o.jsonValue?` <span class="mono">→ ${esc(o.jsonValue)}</span>`:""}${o.widget&&o.widget!==o.label?` <span class="mono" style="color:var(--muted)">(${esc(o.widget)})</span>`:""}`).join("<br>");
   const E=$("#mp-est").value;$("#mp-est").hidden=!(MP_TAB==="res"||MP_TAB==="mat");$("#mp-grp").parentNode.hidden=!(MP_TAB==="pdf"||MP_TAB==="ficha");
   const JST={ok:"✓",otra:"≠ otra ruta",no:"✗ no está",vacio:"—",na:""};
+  $("#mp-table").classList.toggle("dudbox",MP_TAB==="dud");
+  if(MP_TAB==="dud"){mpDud(q);return}
   if(MP_TAB==="mat"){head=["#","Paso WEB","Sección","Pág.","Casillero del PDF","Nombre en formulario","Opciones (WEB → JSON · PDF)","Campo en el JSON","Prefill","Estado","Conf.","Origen"];
     rows=mpOrder().filter(r=>(!E||r.estado_match===E)&&hit(Object.values(r))).map(r=>[r.orden,esc(r.paso_web),esc(r.seccion),r.pagina_pdf,`<span class="mono">${esc(r.grupo||r.widget_pdf)}</span>${r.tipo_widget?` <span class="tag">${esc(r.tipo_widget)}</span>`:""}`,esc(r.label_web),esc(r.opciones).replace(/\n/g,"<br>"),`<span class="mono">${esc(r.path_json)}</span>`,esc(r.prefill),`<span class="est ${r.estado_match}">${r.estado_match}</span>`,r.confianza!==""?(+r.confianza).toFixed(2):"",r.hoja?`${esc(r.hoja)} · ${r.filas}`:""])}
   else if(MP_TAB==="hue"){head=["Tipo","Gravedad","Detalle","Origen","Casillero","Ruta","Sugerencia"];
@@ -764,6 +795,102 @@ function mpTable(){
   $("#mp-qn").textContent=`${rows.length} filas`;
   $("#mp-table").innerHTML=rows.length?`<table><thead><tr>${head.map(h=>`<th>${esc(h)}</th>`).join("")}</tr></thead><tbody>${rows.map(r=>`<tr>${r.map(c=>`<td>${c}</td>`).join("")}</tr>`).join("")}</tbody></table>`:'<p class="empty">Nada para mostrar.</p>';
 }
+/* ════════ v1.4 · Resolver dudosos: vista del PDF con el casillero y los candidatos; un clic elige. Predeterminados guardados ════════ */
+const MP_PK="signaframe-mapear-predeterminados-v1";
+const mpFormKey=()=>{const e=MP.json&&MP.json.data&&MP.json.data.encabezado;return String((e&&e.codigoTipoFormulario)||(MP.files.pdf&&MP.files.pdf.name.replace(/\.pdf$/i,""))||"?")};
+const mpFieldKey=f=>`${f.hoja}|${f.campoJson||slug(f.nombreWeb)}`;
+function mpPredAll(){try{return JSON.parse(localStorage.getItem(MP_PK)||"{}")||{}}catch(e){return{}}}
+function mpPredPut(f,val){const all=mpPredAll();const k=mpFormKey();all[k]=all[k]||{};if(val===undefined)delete all[k][mpFieldKey(f)];else all[k][mpFieldKey(f)]=val;try{localStorage.setItem(MP_PK,JSON.stringify(all));return true}catch(e){return false}}
+/* asigna a mano (u = null: no tiene casillero en este PDF) */
+function mpAssign(f,u,how){
+  if(f.match)f.match.u.fichaId=null;
+  f.manual=how;f.prevEstado=f.prevEstado||f.estado;
+  if(u){
+    const prev=MP.fichaG.find(g=>g!==f&&g.match&&g.match.u===u);
+    if(prev){prev.match=null;prev.opcMap=null;prev.estado=prev.esperaPdf?"SIN_MATCH":"SIN_PDF";prev.confianza=0;prev.senal=`su casillero (${u.name}) pasó a «${f.nombreWeb}» (${how})`;prev.prevEstado=prev.prevEstado||"SEGURO"}
+    f.match={j:MP.units.indexOf(u),u};u.fichaId=f.id;f.estado="SEGURO";f.confianza=1;f.senal=`${how}: ${u.name}`;
+  }else{f.match=null;f.estado=f.esperaPdf?"SIN_MATCH":"SIN_PDF";f.confianza=0;f.senal=`${how}: no tiene casillero en este PDF`}
+  mpOptMap(f);
+}
+/* al procesar: aplica lo elegido antes para este formulario */
+function mpPredApply(){
+  const saved=mpPredAll()[mpFormKey()]||{};let n=0;
+  MP.fichaG.forEach(f=>{if(f.estado==="NO_APLICA")return;const v=saved[mpFieldKey(f)];if(v===undefined)return;
+    if(v==="-"){mpAssign(f,null,"predeterminado guardado");n++;return}
+    const u=MP.units.find(x=>x.name===v);if(u){mpAssign(f,u,"predeterminado guardado");n++}});
+  return n;
+}
+const mpPending=f=>f.estado==="DUDOSO"||(f.estado==="SIN_MATCH"&&!f.manual);
+let MP_DUD=null,MP_DUD_PAGE=null,MP_DUD_TOK=0;
+function mpDudList(q){const rk=f=>f.estado==="DUDOSO"?0:mpPending(f)?1:2;return MP.fichaG.filter(f=>(mpPending(f)||f.manual||f.prevEstado)&&(!q||[f.nombreWeb,f.nombrePdf,f.campoJson,f.hoja].some(x=>String(x||"").toLowerCase().includes(q)))).sort((a,b)=>rk(a)-rk(b)||a.id-b.id)}
+function mpDud(q){
+  const L=mpDudList(q);
+  if(MP_DUD==null||!MP.fichaG[MP_DUD]||!L.includes(MP.fichaG[MP_DUD])){const p=L.find(mpPending)||L[0];MP_DUD=p?p.id:null;MP_DUD_PAGE=null}
+  const pend=MP.fichaG.filter(mpPending).length;
+  $("#mp-qn").textContent=`${pend} por resolver`;
+  if(!L.length){$("#mp-table").innerHTML='<p class="empty">No quedan dudosos ni casilleros sin encontrar. 🎉</p>';return}
+  const f=MP.fichaG[MP_DUD];
+  const cands=f.cands.map(c=>({u:MP.units[c.j],s:c.s}));
+  if(f.match&&!cands.some(c=>c.u===f.match.u))cands.unshift({u:f.match.u,s:f.confianza});
+  const page=MP_DUD_PAGE||(f.match&&f.match.u.page)||(cands[0]&&cands[0].u.page)||1;
+  $("#mp-table").innerHTML=`<div class="dud">
+    <ul class="dud-list" role="listbox" aria-label="Campos por resolver">${L.map(g=>`<li><button class="dud-it${g===f?" on":""}" data-f="${g.id}" role="option" aria-selected="${g===f}"><span class="est ${g.estado}">${g.manual?"✓ ":""}${g.estado}</span> <b>${esc(g.nombreWeb||g.nombrePdf)}</b><br><span class="mono">${esc(g.match?g.match.u.name:"— sin casillero")}</span></button></li>`).join("")}</ul>
+    <div class="dud-view">
+      <div class="dud-head">
+        <div><span class="est ${f.estado}">${f.estado}</span> <b>${esc(f.nombreWeb)}</b> <span class="msg">· ${esc(f.hoja)} fila ${f.filas.join(", ")}</span></div>
+        <div class="msg">En el PDF (ficha): «${esc(f.nombrePdf||"—")}» · JSON: <span class="mono">${esc(f.campoJson||"—")}</span></div>
+        <div class="msg why" style="max-width:none">${esc(f.senal)}</div>
+        <div class="dud-btns">${cands.map((c,k)=>`<button class="btn${f.match&&f.match.u===c.u?" cur":""}" data-pick="${MP.units.indexOf(c.u)}"><span class="num">${k+1}</span> ${esc(c.u.name)} <span class="msg">${Math.min(1,c.s).toFixed(2)} · p${c.u.page}</span>${f.match&&f.match.u===c.u?(f.estado==="SEGURO"?" ✓":" · confirmar"):""}</button>`).join("")}
+          <button class="btn" data-pick="-1">No está en el PDF</button>
+          ${f.manual?`<button class="btn" data-undo="1">Deshacer</button>`:""}</div>
+        <label class="msg"><input type="checkbox" id="mp-pd" ${MP.pdOn===false?"":"checked"}> Guardar como predeterminado para ${esc(mpFormKey())}</label>
+      </div>
+      <div class="bar"><span class="msg">Página</span>${Array.from({length:MP.pdf.pages},(_,i)=>`<button class="btn sm${i+1===page?" pri":""}" data-page="${i+1}">${i+1}</button>`).join("")}<span class="msg">· Tocá un casillero del PDF para elegirlo. <span class="lg cur"></span> actual <span class="lg cand"></span> candidatos</span></div>
+      <div class="dud-pdf" id="mp-pdfv"><canvas id="mp-cv"></canvas><div class="dud-ov" id="mp-ov"></div></div>
+    </div></div>`;
+  mpDudPage(f,page,cands);
+}
+async function mpDudPage(f,page,cands){
+  const tok=++MP_DUD_TOK;const doc=MP.text&&MP.text.doc;const box=$("#mp-pdfv");if(!doc||!box)return;
+  const pg=await doc.getPage(page);const w=Math.min(box.clientWidth||800,900);const vp0=pg.getViewport({scale:1});const vp=pg.getViewport({scale:w/vp0.width});
+  const dpr=window.devicePixelRatio||1;const cv=$("#mp-cv");if(tok!==MP_DUD_TOK||!cv)return;
+  cv.width=Math.round(vp.width*dpr);cv.height=Math.round(vp.height*dpr);cv.style.width=vp.width+"px";cv.style.height=vp.height+"px";
+  await pg.render({canvasContext:cv.getContext("2d"),viewport:pg.getViewport({scale:vp.scale*dpr})}).promise;
+  if(tok!==MP_DUD_TOK)return;
+  const fieldBy=new Map(MP.pdf.fields.map(x=>[x.name,x]));
+  const html=[];let first=null;
+  MP.units.forEach((u,j)=>{
+    const ci=cands.findIndex(c=>c.u===u);const cur=f.match&&f.match.u===u;
+    u.miembros.forEach(m=>{const fd=fieldBy.get(m);if(!fd)return;fd.widgets.forEach(wd=>{if(wd.page!==page||!wd.rect)return;
+      const r=vp.convertToViewportRectangle(wd.rect);const x=Math.min(r[0],r[2]),y=Math.min(r[1],r[3]),W=Math.abs(r[2]-r[0]),H=Math.abs(r[3]-r[1]);
+      if((cur||ci>=0)&&first==null)first=y;
+      html.push(`<button class="ov${cur?" cur":ci>=0?" cand":""}" style="left:${x}px;top:${y}px;width:${Math.max(W,6)}px;height:${Math.max(H,6)}px" data-pick="${j}" title="${esc(u.name)}${u.fichaId!=null&&!cur?` (hoy: ${esc(MP.fichaG[u.fichaId].nombreWeb)})`:""}">${ci>=0&&!cur&&u.miembros[0]===m?`<span class="num">${ci+1}</span>`:""}</button>`)})});
+  });
+  const ov=$("#mp-ov");ov.style.width=vp.width+"px";ov.style.height=vp.height+"px";ov.innerHTML=html.join("");
+  if(first!=null){const pv=$("#mp-pdfv");pv.scrollTop=Math.max(0,first-120)}
+}
+function mpDudPick(j){
+  const f=MP.fichaG[MP_DUD];if(!f)return;const u=j>=0?MP.units[j]:null;
+  const save=$("#mp-pd")?$("#mp-pd").checked:true;MP.pdOn=save;
+  mpAssign(f,u,"elegido a mano");
+  let ok=true;if(save)ok=mpPredPut(f,u?u.name:"-");
+  const nx=mpDudList("").find(mpPending);MP_DUD=nx?nx.id:f.id;MP_DUD_PAGE=null;
+  mpRender();
+  $("#mp-msg").textContent=`«${f.nombreWeb}» → ${u?u.name:"sin casillero"}${save?(ok?" · guardado como predeterminado":" · no se pudo guardar el predeterminado en este navegador"):""}.`;
+}
+function mpDudUndo(){
+  const f=MP.fichaG[MP_DUD];if(!f)return;mpPredPut(f,undefined);
+  /* rehace el cruce automático para todo (lo guardado sigue aplicándose) */
+  MP.units.forEach(u=>u.fichaId=null);MP.fichaG.forEach(g=>{delete g.manual;delete g.prevEstado});mpMatch();mpPredApply();MP_DUD=f.id;mpRender();
+  $("#mp-msg").textContent=`«${f.nombreWeb}»: se borró lo elegido y volvió al cruce automático.`;
+}
+$("#mp-table").addEventListener("click",e=>{
+  if(MP_TAB!=="dud")return;const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.f!=null){MP_DUD=+b.dataset.f;MP_DUD_PAGE=null;mpTable();return}
+  if(b.dataset.page){MP_DUD_PAGE=+b.dataset.page;mpTable();return}
+  if(b.dataset.pick!=null){mpDudPick(+b.dataset.pick);return}
+  if(b.dataset.undo){mpDudUndo()}
+});
 </script>
 </body>
 </html>
