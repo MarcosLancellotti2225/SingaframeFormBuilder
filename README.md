@@ -44,13 +44,13 @@ La plantilla de preguntas mantiene el formato v12 (las listas de Sección / Subs
 
 ## Ordenar y mapear (paso opcional)
 
-`mapear.html` (link en el encabezado de la página principal). Cuando el INS manda su matriz (la ficha en Excel), cruza la ficha con el PDF y el JSON main, la contrasta con el Diccionario INS y arma una matriz normalizada. Solo lee los archivos: no cambia el PDF.
+`mapear.html` (link en el encabezado de la página principal). Cuando el INS manda su matriz (la ficha en Excel), la cruza con el PDF y el JSON main y la contrasta con el Diccionario INS. Solo lee los archivos: no cambia el PDF.
 
-- **Cruce**: cada campo de la ficha con su casillero del PDF (por el texto impreso junto al casillero, el nombre del casillero, los sinónimos del diccionario y el tipo). Estados: SEGURO, DUDOSO, SIN_MATCH (la ficha nombra un casillero que no está), SIN_PDF (solo web / JSON), SIN_FICHA (casillero sin fila), NO_APLICA (títulos). Cada decisión dice por qué.
-- **Ver y mapear**: el PDF (pintado con los valores del JSON main y con cada casillero coloreado según su estado) al lado del JSON. Tocar un casillero muestra su dato; tocar un dato muestra su casillero; «← este casillero» mapea. Un dato que la ficha no tiene se agrega a mano.
-- **Resolver dudosos**: muestra la página del PDF con el casillero y los candidatos; un clic elige. Lo elegido queda como predeterminado de ese formulario en este navegador.
-- **Repeaters**: marca las listas (padecimientos[], intervencionQuirurgica[], direccion[], …) y cuántas filas tiene cada una en el PDF.
-- **Bajar ficha (.xlsx)**: la misma ficha que baja el flujo principal (Portada, Formulario, Opciones, JSON del cliente, Casilleros PDF, Pendientes), armada con el resultado del cruce y en el orden de la matriz. Cada pregunta dice en «Notas» de qué hoja y fila de la ficha del INS sale.
+- **Solapas**: *Todo* (PDF, formulario web y JSON lado a lado), *PDF*, *Formulario web* (cómo se vería, paso por paso), *JSON*, *Revisar* y *Tablas* (las tablas técnicas).
+- **Tocar un campo** en cualquier vista muestra las tres cosas del mismo campo: el casillero del PDF, la pregunta del formulario y la ruta del JSON (con su valor de ejemplo), y lo marca en las otras vistas.
+- **Corregir**: desde el panel del campo, «Cambiar casillero», «Quitar», «Elegir pregunta o dato» o «Está bien» para un dudoso. Lo elegido a mano se recuerda para ese formulario en este navegador.
+- **Revisar**: dudosos, casilleros del PDF sin dato, preguntas sin casillero, datos del JSON sin pregunta, rutas que no cierran, opciones que no cierran y preguntas que no van al PDF.
+- **Bajar ficha (.xlsx)**: la misma ficha que baja el flujo principal (Portada, Formulario, Opciones, JSON del cliente, Casilleros PDF, Pendientes), armada con el cruce. Cada pregunta dice en «Notas» de qué hoja y fila de la ficha del INS sale.
 
 ## Privacidad
 
