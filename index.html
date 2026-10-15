@@ -2529,7 +2529,9 @@ async function f2Excel(msgEl){
   r++;p0.getCell(`B${r}`).value="Hojas";p0.getCell(`B${r}`).font=font({bold:true,size:12,color:{argb:C.blue}});r++;
   [["Formulario","Secciones y preguntas, con su PDF y su JSON"],["Opciones","Opciones de cada lista, con código y casilla del PDF"],["JSON del cliente","Cada dato del JSON y la pregunta que lo llena"],["Casilleros PDF","Nombre original y nuevo de cada casillero"],["Pendientes","Lo que falta resolver"]].forEach(([a,b])=>{const c=p0.getCell(`B${r}`);c.value={text:a,hyperlink:`#'${a}'!A1`};c.font=font({color:{argb:"FF2F6FD6"},underline:true});p0.getCell(`C${r}`).value=b;r++});
   /* Formulario */
-  const w1=wb.addWorksheet("Formulario",{views:[{state:"frozen",ySplit:2,xSplit:4}],properties:{tabColor:{argb:C.blue}}});
+  const w1=wb.addWorksheet("Formulario",{views:[{state:"frozen",ySplit:2,xSplit:4}],properties:{tabColor:{argb:C.blue},outlineProperties:{summaryBelow:false,summaryRight:false}}});
+  /* agrupado: Sección (0) > Subsección (1) > Pregunta (2) > Opciones (3) */
+  const lvl=(r,n)=>{if(n)w1.getRow(r).outlineLevel=n};
   const cols1=[["ID",8],["Sección",22],["Subsección",18],["#",5],["Pregunta",34],["Tipo de respuesta",22],["Obligatoria",11],["Origen",20],["Se repite",10],["Se arma con / parte de",28],["Se muestra si",32],["Opciones",30],["Reglas / formato",22],["Valor o cálculo",18],["Se ve en el PDF",10],["Casilleros del PDF",42],["Estado PDF",12],["Ruta JSON",40],["Estado JSON",13],["Trazabilidad",34],["Ruta del diccionario",40],["Estado vs. diccionario",16]];
   const NC=cols1.length;
   w1.columns=cols1.map(([,w])=>({width:w}));
@@ -2541,7 +2543,7 @@ async function f2Excel(msgEl){
     w1.mergeCells(row,1,row,NC);const sc=w1.getCell(row,1);sc.value=`${s.title}${s.hidden?"  ·  OCULTA (no se le muestra a la persona)":""}${(s.cond&&s.cond.qid)||s.condTxt?"  ·  se muestra si "+condText(s):""}  ·  ${qs.filter(q=>!q.parentId).length} preguntas`;sc.font=font({bold:true,color:{argb:C.white},size:11});sc.fill=F(s.hidden?C.gray:C.sec);w1.getRow(row).height=20;row++;
     let k=0,cs=null;
     qs.forEach(q=>{
-      if(!q.parentId&&fbRootSub(q)!==cs){cs=fbRootSub(q);const u=(s.subs||[]).find(x=>x.title===cs);if(cs){w1.mergeCells(row,1,row,NC);const uc=w1.getCell(row,1);uc.value=`   ${cs}${u&&u.hidden?"  ·  oculta":""}${u&&+u.rep>0?`  ·  se repite hasta ${u.rep}`:""}${u&&((u.cond&&u.cond.qid)||u.condTxt)?"  ·  se muestra si "+condText(u):""}`;uc.font=font({bold:true,color:{argb:C.sec}});uc.fill=F("FFE8ECF4");row++}}
+      if(!q.parentId&&fbRootSub(q)!==cs){cs=fbRootSub(q);const u=(s.subs||[]).find(x=>x.title===cs);if(cs){w1.mergeCells(row,1,row,NC);const uc=w1.getCell(row,1);uc.value=`   ${cs}${u&&u.hidden?"  ·  oculta":""}${u&&+u.rep>0?`  ·  se repite hasta ${u.rep}`:""}${u&&((u.cond&&u.cond.qid)||u.condTxt)?"  ·  se muestra si "+condText(u):""}`;uc.font=font({bold:true,color:{argb:C.sec}});uc.fill=F("FFE8ECF4");lvl(row,1);row++}}
       const parts=fbParts(q);const par=q.parentId?fbQ(q.parentId):null;if(!q.parentId)k++;
       const inPdf=par?par.inPdf!==false:q.inPdf!==false;
       const pdfOk=par||!inPdf?"No aplica":q.boxes.length?"Asignado":"Falta";
@@ -2555,7 +2557,12 @@ async function f2Excel(msgEl){
       w1.getCell(row,16).font=font({name:"Consolas",size:9});w1.getCell(row,18).font=font({name:"Consolas",size:9});
       w1.getCell(row,6).dataValidation={type:"list",allowBlank:true,formulae:[`"${TIPOS.join(",").replace(/"/g,"")}"`]};
       w1.getCell(row,7).dataValidation={type:"list",allowBlank:true,formulae:['"Sí,No,—"']};
-      row++;
+      lvl(row,q.parentId?3:2);row++;
+      q.opts.forEach((o,oi)=>{
+        const ov={5:`      ○ ${o.label}`,12:o.code?`${o.label} = ${o.code}`:o.label,16:o.box!=null&&rn.rows[o.box]?rn.rows[o.box].nuevo:""};
+        for(let c=1;c<=NC;c++){const cell=w1.getCell(row,c);cell.value=ov[c]??"";cell.font=font({color:{argb:C.gray},size:9});cell.border=BOX;cell.alignment={vertical:"top"}}
+        w1.getCell(row,16).font=font({name:"Consolas",size:9,color:{argb:C.gray}});lvl(row,3);row++;
+      });
     });
   });
   w1.autoFilter={from:{row:2,column:1},to:{row:2,column:NC}};
