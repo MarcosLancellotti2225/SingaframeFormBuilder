@@ -40,7 +40,7 @@ La plantilla de preguntas mantiene el formato v12 (las listas de Sección / Subs
 ### Cuando el INS mande una versión nueva del diccionario
 
 1. Guardala en `docs/` (por ejemplo `docs/diccionario_v11.xlsx`). Tiene que tener la hoja «Diccionario (Namirial)» (o «Diccionario General») con las mismas columnas.
-2. Corré `node tools/build_dic.mjs docs/diccionario_v11.xlsx` (solo necesita Node; no instala nada). Reemplaza la constante `DIC` que está entre los marcadores `/*DIC:start*/` y `/*DIC:end*/` de `index.html` y de `mapear.html`, y dice cuántos campos leyó.
+2. Corré `node tools/build_dic.mjs docs/diccionario_v11.xlsx` (solo necesita Node; no instala nada). Reemplaza la constante `DIC` que está entre los marcadores `/*DIC:start*/` y `/*DIC:end*/` de `index.html`, `mapear.html` e `interno.html`, y dice cuántos campos leyó.
 3. Abrí un PR con los archivos y mergealo.
 
 ## Matriz del INS (paso 2, opcional)
@@ -52,6 +52,16 @@ Cuando el INS manda su matriz (la ficha en Excel), el paso 2 la cruza con el PDF
 - **Corregir**: desde el panel del campo, «Cambiar casillero», «Quitar», «Elegir pregunta o dato» o «Está bien» para un dudoso. Lo elegido a mano se recuerda para ese formulario en este navegador.
 - **Revisar**: dudosos, casilleros del PDF sin dato, preguntas sin casillero, datos del JSON sin pregunta, rutas que no cierran, opciones que no cierran y preguntas que no van al PDF.
 - **Pasar al formulario**: arma el paso 3 con las secciones y preguntas de la matriz, con sus casilleros, opciones y rutas. Cada pregunta dice en «Notas» de qué hoja y fila de la matriz sale. Desde ahí se edita, se prueba y se baja la ficha (.xlsx) como siempre.
+
+## Matriz interna (`interno.html`, uso interno)
+
+Página aparte, sin link desde el flujo del cliente. Junta la ficha cerrada (la que baja «Armar») con los campos que Signaframe necesita y baja un Excel con:
+
+- **Formulario Signaframe**: una fila por paso, subsección y campo, agrupadas en niveles 0/1/2. Bloque azul = columnas de la ficha (solo lectura); bloque verde = columnas Signaframe (fuente del form-def). Listas desplegables en Tipo, Ancho y Sí/No. Al final, en rojo, las preguntas de la ficha que quedan fuera, con el motivo.
+- **Opciones**: una fila por opción de cada lista (incluye provincia, cantón y distrito de `docs/catalogo_cr.json`).
+- **Ficha · …**: copia de las hojas de la ficha, como referencia.
+
+Entradas: ficha cerrada (obligatoria), main de Signaframe (para controlar que estén todos los casilleros del PDF) y Matriz del INS (opcional, para el texto legal). El orden de pasos y subsecciones sale del Diccionario V10. Las reglas que aplica: Sí/No → radios + helper booleano; listas con un casillero por opción → radios + helper; tipo de identificación → select + casillas ocultas que pintan el PDF; número + unidad que se concatenan; descripciones desde el select hermano; nombre completo concatenado; padecimientos (casilleros numerados) → repeater con `slotMappings`. El `sourceMeta` no va en la matriz: lo pone `matriz_io.py build` desde el main.
 
 ## Privacidad
 
