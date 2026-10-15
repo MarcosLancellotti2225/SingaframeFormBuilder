@@ -63,6 +63,8 @@ Página aparte, sin link desde el flujo del cliente. Junta la ficha cerrada (la 
 
 Entradas: ficha cerrada (obligatoria), main de Signaframe (para controlar que estén todos los casilleros del PDF) y Matriz del INS (opcional, para el texto legal). El orden de pasos y subsecciones sale del Diccionario V10. Las reglas que aplica: Sí/No → radios + helper booleano; listas con un casillero por opción → radios + helper; tipo de identificación → select + casillas ocultas que pintan el PDF; número + unidad que se concatenan; descripciones desde el select hermano; nombre completo concatenado; padecimientos (casilleros numerados) → repeater con `slotMappings`. El `sourceMeta` no va en la matriz: lo pone `matriz_io.py build` desde el main.
 
+**No puede faltar** (lo agrega aunque no esté en la ficha, con Origen «Obligatorio por diccionario», y lo lista en la hoja «Agregados por diccionario»): los 14 datos del encabezado + `codigoTipo` / `descripcionTipo`, la Póliza Madre oculta, el Asesor prellenado y bloqueado, la firma (paso Firmas, oculto), el texto legal de Declaraciones + la casilla de aceptación, las descripciones de cada lista, el nombre completo concatenado y el helper booleano de cada Sí/No. La firma sale sin posición en el PDF (el main no la trae): hay que ubicarla en Signaframe.
+
 ## Privacidad
 
 Los archivos se procesan en tu navegador, no se suben a ningún servidor. La página es estática (GitHub Pages) y solo descarga las librerías pdf.js, pdf-lib y ExcelJS desde CDN.

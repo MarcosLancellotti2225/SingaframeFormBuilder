@@ -89,7 +89,7 @@ input[type=file]{font:13px var(--sans);max-width:100%}
 
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script>
-const MI_VERSION="v2.0.0";
+const MI_VERSION="v3.0.0";
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 </script>
@@ -1439,7 +1439,10 @@ function buildMatrix(F,opts={}){
     else{q._nc.prefillKey=q.ruta;R.warn.push(`${q.id}: nombre completo sin partes en la ficha; queda prellenado`)}
   }
 
-  /* 4 · condiciones (lectura de «Reglas / formato») */
+  /* 4 · lo que no puede faltar (Diccionario V10 + Signaframe) */
+  noPuedeFaltar({steps,subOf,push,uid,R,legal,mainField,inQ,mainNames});
+
+  /* 5 · condiciones (lectura de «Reglas / formato») */
   const cond=ids=>JSON.stringify({logic:"or",conditions:ids.map(id=>({fieldId:id,operator:"not_empty"}))});
   for(const st of steps)for(const s of st.subs){
     const all=s.qs.find(q=>/despliega todas/i.test(q.reglas)&&q._si);
@@ -1473,7 +1476,7 @@ function buildMatrix(F,opts={}){
     for(const e of extra){st.subs.splice(st.subs.indexOf(e),1);st.subs.splice(st.subs.findIndex(s=>s.id===e._after)+1,0,e)}
   }
 
-  /* 5 · casilleros del main */
+  /* 6 · casilleros del main */
   const allF=steps.flatMap(st=>st.subs.flatMap(s=>s.fields.concat(s.tail)));
   const chk={total:0,ok:0,missing:[],extra:[]};
   if(mainNames){
@@ -1484,6 +1487,103 @@ function buildMatrix(F,opts={}){
   }
 
   return{steps,fuera:R.fuera,R,chk,F,legal};
+}
+
+/* ═══════════════════ v3 · No puede faltar ═══════════════════ */
+const DIC_ROUTE=d=>normR(String(d[4]||"").replace(/\[\]/g,"[0]"));
+const DIC_SIS=DIC.filter(d=>/^encabezado\./.test(d[4])||/personas\[\]\.(codigoTipo|descripcionTipo)$/.test(d[4]));
+const DIC_PM=DIC.filter(d=>/datosGenerales\.polizaMadre\./.test(d[4])&&+d[5]===1);
+const DIC_ASE=DIC.filter(d=>/datosGenerales\.intermediario\./.test(d[4]));
+const DIC_ACEPTA=DIC.find(d=>/indicadorAceptaTerminos$/.test(d[4]));
+/* Firma: mismas claves que la matriz interna v1 de D0873 */
+const FIRMA={id:"field_firma_asegurado",type:"signature",label:"Firma del Asegurado",hidden:true,excludeFromJson:true,prefillKey:"encabezado.correoElectronico",
+  sharedValue:true,visibleInReview:true,signatureSignerNamePrefillKey:"encabezado.nombreCompletoCliente",
+  signatureCcPrefillKey:"datosFormulario.datosGenerales.intermediario.correoElectronico",
+  signatureCcNamesPrefillKey:"datosFormulario.datosGenerales.intermediario.nombre",signatureSendCopy:true};
+const legalHtml=t=>{
+  const ps=[];let cur="";
+  for(const line of String(t).split(/\n/).map(x=>x.trim()).filter(Boolean)){cur+=(cur?" ":"")+line;if(/[.:]$/.test(line)){ps.push(cur);cur=""}}
+  if(cur)ps.push(cur);
+  return ps.map(p=>"<p>"+esc(p)+"</p>").join("");
+};
+
+function noPuedeFaltar({steps,subOf,push,uid,R,legal,mainField,inQ,mainNames}){
+  const all=()=>steps.flatMap(st=>st.subs.flatMap(s=>s.fields.concat(s.tail)));
+  const writes=()=>new Set(all().map(f=>f.jsonOutputPath).filter(Boolean));
+  const SUB=k=>SUBS.find(s=>s.k===k);
+  const add=(subK,f,d,why)=>{
+    const sd=SUB(subK);const s=subOf(sd.step,sd);
+    f._origen="Obligatorio por diccionario";if(d)f._dic={label:d[0],ruta:DIC_ROUTE(d),donde:d[2]+" › "+d[3]};
+    const bx=f.id.replace(/^field_/,"");  // si el main trae ese casillero y nadie lo usa, es de este campo
+    if(mainNames&&!f.hidden&&[...mainNames].some(n=>n.toLowerCase()===bx)&&!all().some(x=>x._box&&x._box.toLowerCase()===bx))f._box=[...mainNames].find(n=>n.toLowerCase()===bx);
+    push(s,null,f,{tail:!!f.hidden&&!["sistema","poliza"].includes(subK)});
+    R.added.push({id:f.id,que:f.label,por:why});
+    return f;
+  };
+  const sysField=d=>{const r=DIC_ROUTE(d),l=leafOf(r);
+    return{id:uid("field_"+baseFromRoute(r)),type:/^(conozca|indicador)/.test(l)?"boolean":"text",label:d[0],hidden:true,readOnly:true,jsonOutputPath:r,prefillKey:r,sharedValue:true}};
+
+  /* encabezado (14) + codigoTipo / descripcionTipo */
+  let w=writes();
+  for(const d of DIC_SIS)if(!w.has(DIC_ROUTE(d)))add("sistema",sysField(d),d,"Datos del sistema: el JSON siempre lleva "+DIC_ROUTE(d));
+  /* póliza madre, oculta */
+  for(const d of DIC_PM)if(!w.has(DIC_ROUTE(d)))add("poliza",sysField(d),d,"Póliza Madre (oculta, se prellena)");
+  for(const f of all())if(/datosGenerales\.polizaMadre\./.test(f.jsonOutputPath||"")){f.hidden=true;f.readOnly=true}
+  /* asesor: prellenado y solo lectura */
+  for(const d of DIC_ASE){
+    const r=DIC_ROUTE(d);
+    if(!w.has(r)){const hid=/codigoTipoIdentificacion$/.test(r);
+      add("asesor",{id:uid("field_"+baseFromRoute(r)),type:/codigoIntermediario$/.test(r)?"number":"text",label:d[0],hidden:hid||undefined,readOnly:true,
+        width:hid?null:(/nombre$|correo/i.test(r)?"half":"quarter"),jsonOutputPath:r,prefillKey:r,sharedValue:hid||undefined},d,"Asesor: prellenado y bloqueado")}
+  }
+  for(const f of all())if(/datosGenerales\.intermediario\./.test(f.jsonOutputPath||"")){
+    if(!f.readOnly||!f.prefillKey)R.added.push({id:f.id,que:f.label,por:"Asesor: se marcó solo lectura y prellenado"});f.readOnly=true;f.prefillKey=f.jsonOutputPath}
+  /* firma */
+  if(!all().some(f=>f.type==="signature")){
+    add("firmas",{...FIRMA,id:uid(FIRMA.id)},null,"Signaframe: el formulario se firma (paso Firmas, oculto)");
+    R.warn.push("La firma no tiene posición en el PDF: el main no trae sourceMeta para la firma. Cargarla en Signaframe (sin rect no se genera la firma).");
+  }
+  /* declaraciones: texto legal + casilla de aceptación */
+  const ds=subOf("dec",SUB("decl"));
+  const txt=legal.map(x=>x.texto).find(t=>/hago constar|declaro|autorizo/i.test(t))||legal[0]?.texto;
+  if(!ds.instructions){
+    if(txt){ds.instructions=legalHtml(txt);R.added.push({id:ds.id,que:"Texto de Declaraciones y Autorización",por:"Texto legal de la Matriz del INS («Texto Informativo»)"})}
+    else R.warn.push("Falta el texto legal de Declaraciones: subí la Matriz del INS o cargalo a mano en «Otras propiedades» de sub_declaraciones (instructions).");
+  }
+  w=writes();
+  if(DIC_ACEPTA&&!w.has(DIC_ROUTE(DIC_ACEPTA)))
+    add("decl",{id:uid("field_acepta_terminos"),type:"checkbox",label:"He leído y comprendo el texto anterior, declaro que la información es verídica y acepto las condiciones y autorizaciones descritas.",
+      required:true,width:"full",jsonOutputPath:DIC_ROUTE(DIC_ACEPTA),sharedValue:true},DIC_ACEPTA,"Declaraciones: casilla de aceptación obligatoria");
+  /* descripciones de cada select (descripcionX ← codigoX, valueSource visible) */
+  w=writes();
+  for(const f of all().filter(f=>f.type==="select"&&f.jsonOutputPath)){
+    const r=f.jsonOutputPath,l=leafOf(r);
+    const dl=l==="codigoMedioNotificacion"?"medioNotificacion":/^codigo[A-Z]/.test(l)?"descripcion"+l.replace(/^codigo/,""):null;
+    if(!dl)continue;
+    const dr=parentOf(r)+"."+dl;
+    if(w.has(dr)||!DIC_BY_ROUTE[dr])continue;
+    const st=steps.find(st=>st.subs.some(s=>s.fields.includes(f)));const s=st.subs.find(s=>s.fields.includes(f));
+    let id="field_"+baseFromRoute(dr);if(all().some(x=>x.id===id))id+="_desc";
+    const h={id:uid(id),type:"text",label:DIC_BY_ROUTE[dr][0]+" (helper)",hidden:true,readOnly:true,jsonOutputPath:dr,
+      autoFillConcat:{sourceFieldIds:[f.id],separator:"",parts:[{kind:"field",fieldId:f.id,valueSource:"visible"}]},sharedValue:true,
+      _origen:"Obligatorio por diccionario",_dic:{label:DIC_BY_ROUTE[dr][0],ruta:dr,donde:DIC_BY_ROUTE[dr][2]+" › "+DIC_BY_ROUTE[dr][3]}};
+    push(s,null,h,{tail:true});R.added.push({id:h.id,que:h.label,por:"Descripción del select "+f.id});
+  }
+  /* nombre completo concatenado */
+  const parts=Object.fromEntries(NAME_PARTS.map(k=>[k,all().find(f=>f.jsonOutputPath==="datosFormulario.personas[0]."+k&&!f.hidden)]).filter(x=>x[1]));
+  const ncR="datosFormulario.personas[0].nombreCompleto";
+  if(Object.keys(parts).length&&!all().some(f=>f.jsonOutputPath===ncR)){
+    const ord=["primerNombre","segundoNombre","primerApellido","segundoApellido"].filter(k=>parts[k]).map(k=>parts[k].id);
+    add("persona",{id:uid("field_asg_nombre_completo"),type:"text",label:"Nombre completo",readOnly:true,width:"full",jsonOutputPath:ncR,sharedValue:true,
+      autoFillConcat:{sourceFieldIds:NAME_PARTS.filter(k=>parts[k]).map(k=>parts[k].id),separator:" ",parts:ord.map(id=>({kind:"field",fieldId:id}))}},DIC_BY_ROUTE[ncR]||null,"Nombre completo: se arma con nombres y apellidos");
+  }
+  /* Sí/No → radios + helper booleano */
+  for(const f of all().filter(f=>f.type==="radio"&&f.jsonValue==="true")){
+    const has=all().some(h=>h.type==="boolean"&&(h.autoFillConcat?.sourceFieldIds||[]).includes(f.id));
+    if(!has){const q=f._q;
+      if(q&&q.ruta)R.warn.push(`${f.id}: grupo Sí/No sin helper booleano (${q.ruta})`);
+      else if(!q)R.warn.push(`${f.id}: grupo Sí/No sin ruta JSON; no lleva helper`)}
+  }
 }
 
 /* ═══════════════════ Excel (formato de matriz_io.py) ═══════════════════ */
@@ -1499,6 +1599,7 @@ const fill=h=>({type:"pattern",pattern:"solid",fgColor:{argb:ARGB(h)}});
 
 function fichaVals(f){
   const q=f._q;
+  if(!q&&f._dic)return{"Pregunta (ficha)":"      (no está en la ficha) "+f._dic.label,"Origen":f._origen,"Ruta JSON (ficha)":f._dic.ruta,"Notas":"Diccionario V10: "+f._dic.donde};
   if(!q)return{"Pregunta (ficha)":"      (campo interno)","Origen":f._origen||"Interno Signaframe"};
   return{"ID ficha":q.id,"Pregunta (ficha)":"      "+q.rawLabel,"Tipo de respuesta":q.tipo,"Obligatoria (ficha)":q.obligTxt,"Origen":f._origen||q.origen,
     "Reglas / formato":q.reglas,"Ruta JSON (ficha)":q.rutaFicha,"Notas":q.notas};
@@ -1574,6 +1675,11 @@ async function exportXlsx(M){
   for(const r of optRows)wo.addRow(r);
   [38,7,40,30,16,14,20].forEach((w,i)=>wo.getColumn(i+1).width=w);
   wo.autoFilter={from:{row:1,column:1},to:{row:Math.max(1,wo.rowCount),column:7}};
+  const wa=wb.addWorksheet("Agregados por diccionario");
+  wa.addRow(["id","Qué","Por qué"]);
+  wa.getRow(1).eachCell(c=>{c.fill=fill("1E6B45");c.font={bold:true,color:{argb:"FFFFFFFF"}}});
+  for(const a of M.R.added)wa.addRow([a.id,a.que,a.por]);
+  [34,50,70].forEach((w,i)=>wa.getColumn(i+1).width=w);
   for(const sh of M.F.sheets){
     const d=wb.addWorksheet(("Ficha · "+sh.name).slice(0,31));
     for(const r of sh.rows)d.addRow(r);
@@ -1600,7 +1706,7 @@ window.miRun=miRun;
 
 function render(M){
   const c=M.counts,k=M.chk;
-  const kp=[[c.campo,"campos"],[c.sub,"subsecciones"],[c.paso,"pasos"],[c.fuera,"preguntas fuera"],[c.opciones,"opciones"]];
+  const kp=[[c.campo,"campos"],[M.R.added.length,"agregados por el diccionario"],[c.sub,"subsecciones"],[c.paso,"pasos"],[c.fuera,"preguntas fuera"],[c.opciones,"opciones"]];
   if(k.total)kp.unshift([`${k.ok}/${k.total}`,"casilleros del PDF",k.ok===k.total?"good":"bad"]);
   $("#kpis").innerHTML=kp.map(([v,l,cl])=>`<div class="kpi ${cl||""}"><b>${esc(v)}</b><span>${esc(l)}</span></div>`).join("");
   const box=(t,items,cls="")=>items.length?`<div class="${cls}"><b>${esc(t)}</b><ul class="lst">${items.map(x=>`<li>${x}</li>`).join("")}</ul></div>`:"";
@@ -1608,6 +1714,7 @@ function render(M){
   if(k.total&&k.missing.length)h+=box("Casilleros del main sin campo",k.missing.map(x=>`<span class="mono">${esc(x)}</span>`),"warn");
   if(k.extra.length)h+=box("Casilleros en la matriz que no están en el main",k.extra.map(x=>`<span class="mono">${esc(x)}</span>`),"warn");
   if(M.R.repeaters.length)h+=box("Repeaters (riesgo §21: los slotMappings no siempre pintan el PDF; probarlo en Signaframe)",M.R.repeaters.map(r=>`<span class="mono">${esc(r.id)}</span>: ${r.items} ítems, ${r.slots} casilleros · <span class="mono">${esc(r.pattern)}</span>`),"warn");
+  h+=box("Agregado por el diccionario (no estaba en la ficha)",M.R.added.map(a=>`<span class="mono">${esc(a.id)}</span> ${esc(a.que)} — ${esc(a.por)}`));
   h+=box("Preguntas fuera del formulario",M.fuera.map(q=>`${esc(q.id)} ${esc(q.label)} — ${esc(q.fuera)}`));
   h+=box("Opciones que no entran",M.R.dropped.map(esc));
   h+=box("Avisos",M.R.warn.map(esc));
