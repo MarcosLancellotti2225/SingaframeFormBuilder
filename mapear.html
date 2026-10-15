@@ -96,6 +96,23 @@ button.btn.sm{padding:3px 10px;font-size:13px}
 .lg{display:inline-block;width:14px;height:10px;vertical-align:middle;border-radius:2px;margin:0 2px 0 6px}
 .lg.cur{border:2px solid #3346c8;background:rgba(51,70,200,.25)}.lg.cand{border:2px dashed #a35a00;background:rgba(240,178,94,.22)}
 @media (max-width:760px){.dud{grid-template-columns:1fr}.dud-list{max-height:30vh}}
+.map{display:grid;grid-template-columns:minmax(0,1.25fr) minmax(0,1fr);gap:14px;align-items:start}
+.map>*{min-width:0}.map-pdf,.map-side{display:grid;gap:8px}
+.map .dud-pdf{max-height:80vh}
+.jtree{max-height:70vh;overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--paper)}
+.jrow{display:grid;grid-template-columns:1fr auto;gap:2px 10px;padding:7px 10px;border-bottom:1px solid var(--line);cursor:pointer;font-size:13px}
+.jrow:hover{background:var(--soft)}.jrow.on{background:var(--form-bg);box-shadow:inset 3px 0 0 var(--form)}
+.jrow.solo .jp{color:var(--pdf)}
+.jrow .jp{grid-column:1/-1;font-size:12px}.jrow .jv{grid-column:1/-1;color:var(--json);font-size:12px}.jrow .jv .ph{color:var(--info);font-style:italic}
+.jrow .jw{display:flex;gap:6px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+.lnk{border:0;background:none;color:var(--form);cursor:pointer;padding:0;text-decoration:underline;font-size:12px}
+.ov.mst{display:flex;align-items:center;overflow:hidden;color:#17306b;line-height:1;text-align:left}
+.ov.st-SEGURO,.lg.st-SEGURO{border:1px solid rgba(23,120,79,.7);background:rgba(23,120,79,.10)}
+.ov.st-DUDOSO,.lg.st-DUDOSO{border:2px dashed #a35a00;background:rgba(240,178,94,.22)}
+.ov.st-SIN_FICHA,.lg.st-SIN_FICHA,.ov.st-SIN_MATCH,.ov.st-SIN_PDF{border:2px solid #b4231d;background:rgba(180,35,29,.12)}
+.ov.sel,.lg.sel{border:2px solid #3346c8!important;background:rgba(51,70,200,.28)!important;box-shadow:0 0 0 2px rgba(51,70,200,.35)}
+.pv{padding:0 2px;white-space:nowrap;font-family:var(--sans);font-weight:500}.pv.ph{color:#5b2db8;font-style:italic}
+@media (max-width:900px){.map{grid-template-columns:1fr}.jtree{max-height:50vh}}
 .filters select{font:14px var(--sans);padding:6px 8px;border:1px solid var(--line);border-radius:7px;background:var(--paper);color:var(--ink)}
 .est{display:inline-block;font:600 11px var(--mono);border-radius:4px;padding:1px 6px;white-space:nowrap}
 .est.SEGURO{background:var(--json-bg);color:var(--json)}.est.DUDOSO{background:var(--pdf-bg);color:var(--pdf)}.est.SIN_MATCH{background:var(--warn-bg);color:var(--warn)}
@@ -127,7 +144,8 @@ button.btn.sm{padding:3px 10px;font-size:13px}
   <div class="stats" id="mp-stats"></div>
   <ul class="warns" id="mp-warns" style="margin-top:10px"></ul>
   <div class="tabs" role="tablist" style="margin-top:14px">
-    <button role="tab" data-tab="mat" aria-selected="true">Matriz ordenada</button>
+    <button role="tab" data-tab="map" aria-selected="true">Ver y mapear</button>
+    <button role="tab" data-tab="mat" aria-selected="false">Matriz ordenada</button>
     <button role="tab" data-tab="res" aria-selected="false">Resultado del cruce</button>
     <button role="tab" data-tab="dud" aria-selected="false">Resolver dudosos</button>
     <button role="tab" data-tab="hue" aria-selected="false">Huecos</button>
@@ -147,7 +165,7 @@ button.btn.sm{padding:3px 10px;font-size:13px}
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script>
 "use strict";
-const MP_VERSION="v1.5.0";
+const MP_VERSION="v1.6.0";
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const slug=t=>String(t||"").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
@@ -770,12 +788,12 @@ $("#mp-go").addEventListener("click",async()=>{
     MP.pdf.fields.forEach(f=>{f.ctx=mpCtx(MP.text.items,f.page,f.rect)});
     MP.pdfG=mpGroupPdf(MP.pdf.fields);MP.pdfG.forEach(g=>{const m=MP.pdf.fields.filter(f=>g.miembros.includes(f.name));const first=m.reduce((a,f)=>!a||(f.rect&&a.rect&&f.rect[0]<a.rect[0])?f:a,null);g.ctx=first?first.ctx:{left:"",above:"",right:""};g.optTxt=m.map(f=>f.ctx.right)});
     MP.fichaG=mpGroupFicha(MP.ficha.rows);
-    MP.units=mpCollapseRep(MP.pdfG);mpMatch();MP.pred=mpPredApply();MP_DUD=null;
+    MP.units=mpCollapseRep(MP.pdfG);mpMatch();MP.pred=mpPredApply();MP_DUD=null;MP_MAP.u=null;MP_MAP.path=null;MP_MAP.page=1;
     mpRender();m.textContent=MP.pred?`Listo. Se aplicaron ${MP.pred} predeterminados guardados para ${mpFormKey()}.`:"Listo.";
   }catch(e){console.warn(e);m.textContent="No se pudo procesar: revisá el archivo marcado en rojo."}
   finally{$("#mp-go").disabled=false}
 });
-let MP_TAB="mat";
+let MP_TAB="map";
 document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",()=>{MP_TAB=b.dataset.tab;document.querySelectorAll(".tabs button").forEach(x=>x.setAttribute("aria-selected",x===b));mpTable()}));
 $("#mp-q").addEventListener("input",()=>mpTable());
 $("#mp-grp").addEventListener("change",()=>mpTable());
@@ -801,8 +819,9 @@ function mpTable(){
   const optTxt=os=>os.map(o=>`${esc(o.label??o.pdfValue)}${o.jsonValue?` <span class="mono">→ ${esc(o.jsonValue)}</span>`:""}${o.widget&&o.widget!==o.label?` <span class="mono" style="color:var(--muted)">(${esc(o.widget)})</span>`:""}`).join("<br>");
   const E=$("#mp-est").value;$("#mp-est").hidden=!(MP_TAB==="res"||MP_TAB==="mat");$("#mp-grp").parentNode.hidden=!(MP_TAB==="pdf"||MP_TAB==="ficha");
   const JST={ok:"✓",otra:"≠ otra ruta",no:"✗ no está",vacio:"—",na:""};
-  $("#mp-table").classList.toggle("dudbox",MP_TAB==="dud");
+  $("#mp-table").classList.toggle("dudbox",MP_TAB==="dud"||MP_TAB==="map");
   if(MP_TAB==="dud"){mpDud(q);return}
+  if(MP_TAB==="map"){mpMap(q);return}
   if(MP_TAB==="mat"){head=["#","Paso WEB","Sección","Pág.","Casillero del PDF","Nombre en formulario","Opciones (WEB → JSON · PDF)","Campo en el JSON","Prefill","Estado","Conf.","Origen"];
     rows=mpOrder().filter(r=>(!E||r.estado_match===E)&&hit(Object.values(r))).map(r=>[r.orden,esc(r.paso_web),esc(r.seccion),r.pagina_pdf,`<span class="mono">${esc(r.grupo||r.widget_pdf)}</span>${r.tipo_widget?` <span class="tag">${esc(r.tipo_widget)}</span>`:""}`,esc(r.label_web),esc(r.opciones).replace(/\n/g,"<br>"),`<span class="mono">${esc(r.path_json)}</span>`,esc(r.prefill),`<span class="est ${r.estado_match}">${r.estado_match}</span>`,r.confianza!==""?(+r.confianza).toFixed(2):"",r.hoja?`${esc(r.hoja)} · ${r.filas}`:""])}
   else if(MP_TAB==="rep"){head=["Lista","Ruta","Elementos en el JSON main","Campos en la ficha","Casilleros del PDF","Filas en el PDF","Notas"];
@@ -850,6 +869,7 @@ function mpAssign(f,u,how){
 }
 /* al procesar: aplica lo elegido antes para este formulario */
 function mpPredApply(){
+  if(typeof mpPredFields==="function")mpPredFields();
   const saved=mpPredAll()[mpFormKey()]||{};let n=0;
   MP.fichaG.forEach(f=>{if(f.estado==="NO_APLICA")return;const v=saved[mpFieldKey(f)];if(v===undefined)return;
     if(v==="-"){mpAssign(f,null,"predeterminado guardado");n++;return}
@@ -891,7 +911,7 @@ async function mpDudPage(f,page,cands){
   const pg=await doc.getPage(page);const w=Math.min(box.clientWidth||800,900);const vp0=pg.getViewport({scale:1});const vp=pg.getViewport({scale:w/vp0.width});
   const dpr=window.devicePixelRatio||1;const cv=$("#mp-cv");if(tok!==MP_DUD_TOK||!cv)return;
   cv.width=Math.round(vp.width*dpr);cv.height=Math.round(vp.height*dpr);cv.style.width=vp.width+"px";cv.style.height=vp.height+"px";
-  await pg.render({canvasContext:cv.getContext("2d"),viewport:pg.getViewport({scale:vp.scale*dpr})}).promise;
+  try{await pg.render({canvasContext:cv.getContext("2d"),viewport:pg.getViewport({scale:vp.scale*dpr})}).promise}catch(e){return}
   if(tok!==MP_DUD_TOK)return;
   const fieldBy=new Map(MP.pdf.fields.map(x=>[x.name,x]));
   const html=[];let first=null;
@@ -902,7 +922,7 @@ async function mpDudPage(f,page,cands){
       if((cur||ci>=0)&&first==null)first=y;
       html.push(`<button class="ov${cur?" cur":ci>=0?" cand":""}" style="left:${x}px;top:${y}px;width:${Math.max(W,6)}px;height:${Math.max(H,6)}px" data-pick="${j}" title="${esc(u.name)}${u.fichaId!=null&&!cur?` (hoy: ${esc(MP.fichaG[u.fichaId].nombreWeb)})`:""}">${ci>=0&&!cur&&u.miembros[0]===m?`<span class="num">${ci+1}</span>`:""}</button>`)})});
   });
-  const ov=$("#mp-ov");ov.style.width=vp.width+"px";ov.style.height=vp.height+"px";ov.innerHTML=html.join("");
+  const ov=$("#mp-ov");if(!ov)return;ov.style.width=vp.width+"px";ov.style.height=vp.height+"px";ov.innerHTML=html.join("");
   if(first!=null){const pv=$("#mp-pdfv");pv.scrollTop=Math.max(0,first-120)}
 }
 function mpDudPick(j){
@@ -927,6 +947,116 @@ $("#mp-table").addEventListener("click",e=>{
   if(b.dataset.pick!=null){mpDudPick(+b.dataset.pick);return}
   if(b.dataset.undo){mpDudUndo()}
 });
+/* ════════ v1.6 · Ver y mapear: el PDF (con los valores del JSON main) al lado del JSON; se mapea con dos clics ════════ */
+const MP_MAN="(agregado a mano)";
+let MP_MAP={u:null,path:null,page:1,vals:true,tok:0,scrollJ:false};
+const mpJIndex=()=>{const m=new Map();MP.json.paths.forEach(p=>{if(p.type==="array")return;const k=mpPathN(p.path);if(!m.has(k))m.set(k,p)});return m};
+const mpPathOf=f=>f.json.st==="otra"?f.json.alt:mpPathN(f.campoJson);
+/* un campo nuevo para un dato del JSON que la ficha no tiene */
+function mpAddField(path){
+  const J=mpJIndex().get(path);const leaf=path.split(".").pop();
+  const f={hoja:MP_MAN,filas:[],paso:"",seccion:"",nombreWeb:leaf,nombrePdf:"",controlWeb:J&&J.type==="boolean"?"Radio":"",valoresWeb:"",tipoJson:J?J.type:"",mapeo:"",regla:"",oblWeb:"",oblJson:"",
+    formulario:"",visualizacion:"",observaciones:"Agregado a mano desde el JSON main",seccionJson:"",campoJson:path,nombreInternoPdf:"",opciones:[],agrupado:false,cands:[]};
+  f.id=MP.fichaG.length;f.kind=mpKind(f);f.dic=mpDicOf(f);f.noCampo=false;f.esperaPdf=false;f.json=J?{st:"ok",p:J}:{st:"no"};
+  if(f.dic.i>=0){f.paso=DIC[f.dic.i][2];f.seccion=DIC[f.dic.i][3];f.nombreWeb=DIC[f.dic.i][0]}else{f.paso=MP_MAN;f.seccion=MP_MAN}
+  f.estado="SIN_PDF";f.confianza=0;f.senal="agregado a mano: la ficha no tiene este dato";
+  MP.fichaG.push(f);return f;
+}
+/* lo guardado también puede crear campos agregados a mano */
+function mpPredFields(){const saved=mpPredAll()[mpFormKey()]||{};Object.keys(saved).forEach(k=>{if(!k.startsWith(MP_MAN+"|"))return;const p=k.slice(MP_MAN.length+1);if(!MP.fichaG.some(f=>f.hoja===MP_MAN&&f.campoJson===p))mpAddField(p)})}
+/* filas del panel JSON: todo el JSON main + lo que la ficha nombra y el JSON no trae */
+function mpJsonRows(){
+  const J=mpJIndex();const rows=[];const byPath=new Map();
+  MP.fichaG.forEach(f=>{if(f.noCampo||!f.campoJson)return;const k=mpPathOf(f);if(!byPath.has(k))byPath.set(k,[]);byPath.get(k).push(f)});
+  J.forEach((p,k)=>rows.push({path:k,ex:p.ex,type:p.type,ph:p.placeholder,fs:byPath.get(k)||[],enJson:true}));
+  byPath.forEach((fs,k)=>{if(!J.has(k))rows.push({path:k,ex:undefined,type:"",fs,enJson:false})});
+  return rows;
+}
+/* valor del JSON main que «pinta» cada casilla */
+function mpPaint(){
+  const J=mpJIndex();const out=new Map();
+  MP.fichaG.forEach(f=>{if(!f.match)return;const u=f.match.u;const p=J.get(mpPathOf(f));if(!p)return;const ex=p.ex;
+    if(u.agrupado){(f.opcMap||[]).forEach(o=>{if(!o.widget)return;const on=o.jsonValue!==""&&String(o.jsonValue).toLowerCase()===String(ex).toLowerCase();out.set(o.widget,{t:on?"✓":"",ph:false})});return}
+    out.set(u.miembros[0],{t:typeof ex==="string"?ex:JSON.stringify(ex),ph:!!p.placeholder});
+  });
+  return out;
+}
+function mpMap(q){
+  const jr=mpJsonRows().filter(r=>!q||[r.path,...r.fs.map(f=>f.nombreWeb),...r.fs.map(f=>f.match?f.match.u.name:"")].some(x=>String(x||"").toLowerCase().includes(q)));
+  const U=MP_MAP.u!=null?MP.units[MP_MAP.u]:null;const UF=U&&U.fichaId!=null?MP.fichaG[U.fichaId]:null;
+  const selRow=MP_MAP.path;
+  const libres=MP.units.filter(u=>u.fichaId==null).length,sinW=mpJsonRows().filter(r=>r.enJson&&!r.fs.some(f=>f.match)).length;
+  $("#mp-qn").textContent=`${jr.length} datos · ${libres} casilleros sin dato · ${sinW} datos del JSON sin casillero`;
+  const fTxt=f=>`<span class="est ${f.estado}">${f.estado}</span> ${esc(f.nombreWeb)} <span class="msg">· ${esc(f.hoja)}${f.filas.length?" "+f.filas.join(", "):""}</span>`;
+  $("#mp-table").innerHTML=`<div class="map">
+    <div class="map-pdf">
+      <div class="bar"><span class="msg">Página</span>${Array.from({length:MP.pdf.pages},(_,i)=>`<button class="btn sm${i+1===MP_MAP.page?" pri":""}" data-mpage="${i+1}">${i+1}</button>`).join("")}
+        <label class="msg"><input type="checkbox" id="mp-vals" ${MP_MAP.vals?"checked":""}> Pintar con los valores del JSON main</label></div>
+      <div class="msg">Colores: <span class="lg st-SEGURO"></span>seguro <span class="lg st-DUDOSO"></span>dudoso <span class="lg st-SIN_FICHA"></span>sin dato <span class="lg sel"></span>elegido</div>
+      <div class="dud-pdf" id="mp-mapv"><canvas id="mp-mcv"></canvas><div class="dud-ov" id="mp-mov"></div></div>
+    </div>
+    <div class="map-side">
+      <div class="dud-head" id="mp-msel">${U?`<div><b class="mono">${esc(U.name)}</b> <span class="tag">${esc(U.tipo)} · p${U.page}</span>${U.repeater?` <span class="tag arr">repite ×${U.repeater.filas.length}</span>`:""}</div>
+        <div>${UF?fTxt(UF):'<span class="est SIN_FICHA">SIN DATO</span> este casillero no va a ningún dato'}</div>
+        ${UF?`<div class="msg">JSON: <span class="mono">${esc(UF.campoJson)}</span></div><div class="why" style="max-width:none">${esc(UF.senal)}</div>`:""}
+        ${U.agrupado?`<div class="msg">Opciones: ${U.opciones.map(o=>esc(o.label)).join(" · ")}</div>`:""}
+        <div class="msg"><b>Tocá «← este casillero» en un dato del JSON para mapearlo.</b></div>
+        <div class="dud-btns">${UF?'<button class="btn sm" data-unmap="1">Quitar el mapeo</button>':""}<button class="btn sm" data-desel="1">Cerrar</button>
+        <label class="msg"><input type="checkbox" id="mp-pd2" ${MP.pdOn===false?"":"checked"}> Guardar como predeterminado</label></div>`
+        :`<div class="msg">Tocá un casillero del PDF para ver a qué dato va, o un dato del JSON para ver su casillero.</div>`}</div>
+      <div class="jtree" id="mp-jtree">${jr.map(r=>{const f=r.fs[0];const u=f&&f.match?f.match.u:null;const sel=selRow===r.path||(U&&u===U);
+        return`<div class="jrow${sel?" on":""}${r.enJson?"":" solo"}" data-jpath="${esc(r.path)}">
+          <div class="jp mono">${esc(r.path)}</div>
+          <div class="jv">${r.enJson?`<span class="mono${r.ph?" ph":""}">${esc(typeof r.ex==="string"?r.ex:JSON.stringify(r.ex))}</span>`:'<span class="tag">solo en la ficha</span>'}</div>
+          <div class="jf">${r.fs.length?r.fs.map(fTxt).join("<br>"):'<span class="msg">sin fila en la ficha</span>'}</div>
+          <div class="jw">${u?`<button class="lnk mono" data-goto="${MP.units.indexOf(u)}">${esc(u.name)}</button>`:'<span class="msg">— sin casillero</span>'}
+            ${U&&u!==U?`<button class="btn sm" data-assign="${esc(r.path)}">← este casillero</button>`:""}</div></div>`}).join("")}</div>
+    </div></div>`;
+  mpMapPage();
+  if(MP_MAP.scrollJ){MP_MAP.scrollJ=false;const on=document.querySelector("#mp-jtree .jrow.on");if(on)on.scrollIntoView({block:"nearest"})}
+}
+async function mpMapPage(){
+  const tok=++MP_MAP.tok;const doc=MP.text&&MP.text.doc;const box=$("#mp-mapv");if(!doc||!box)return;
+  const page=MP_MAP.page;const pg=await doc.getPage(page);const w=Math.min(box.clientWidth||700,900);const vp0=pg.getViewport({scale:1});const vp=pg.getViewport({scale:w/vp0.width});
+  const dpr=window.devicePixelRatio||1;const cv=$("#mp-mcv");if(tok!==MP_MAP.tok||!cv)return;
+  cv.width=Math.round(vp.width*dpr);cv.height=Math.round(vp.height*dpr);cv.style.width=vp.width+"px";cv.style.height=vp.height+"px";
+  try{await pg.render({canvasContext:cv.getContext("2d"),viewport:pg.getViewport({scale:vp.scale*dpr})}).promise}catch(e){return}
+  if(tok!==MP_MAP.tok)return;
+  const fieldBy=new Map(MP.pdf.fields.map(x=>[x.name,x]));const paint=MP_MAP.vals?mpPaint():new Map();
+  const selPath=MP_MAP.path;const html=[];let first=null;
+  MP.units.forEach((u,j)=>{
+    const f=u.fichaId!=null?MP.fichaG[u.fichaId]:null;const st=f?f.estado:"SIN_FICHA";
+    const sel=MP_MAP.u===j||(selPath&&f&&mpPathOf(f)===selPath);
+    u.miembros.forEach(m=>{const fd=fieldBy.get(m);if(!fd)return;fd.widgets.forEach(wd=>{if(wd.page!==page||!wd.rect)return;
+      const r=vp.convertToViewportRectangle(wd.rect);const x=Math.min(r[0],r[2]),y=Math.min(r[1],r[3]),W=Math.abs(r[2]-r[0]),H=Math.abs(r[3]-r[1]);
+      if(sel&&first==null)first=y;const pv=paint.get(m);
+      html.push(`<button class="ov mst st-${st}${sel?" sel":""}" style="left:${x}px;top:${y}px;width:${Math.max(W,6)}px;height:${Math.max(H,6)}px;font-size:${Math.max(7,Math.min(11,H*.7))}px" data-u="${j}" title="${esc(u.name)}${f?` → ${esc(f.campoJson||f.nombreWeb)}`:" (sin dato)"}">${pv&&pv.t?`<span class="pv${pv.ph?" ph":""}">${esc(pv.t)}</span>`:""}</button>`)})});
+  });
+  const ov=$("#mp-mov");if(!ov)return;ov.style.width=vp.width+"px";ov.style.height=vp.height+"px";ov.innerHTML=html.join("");
+  if(first!=null){const pv=$("#mp-mapv");const top=first-pv.clientHeight/3;if(first<pv.scrollTop||first>pv.scrollTop+pv.clientHeight-40)pv.scrollTop=Math.max(0,top)}
+}
+function mpMapAssign(path){
+  const u=MP.units[MP_MAP.u];if(!u)return;
+  let f=MP.fichaG.find(g=>!g.noCampo&&g.campoJson&&mpPathOf(g)===path);let nuevo=false;
+  if(!f){f=mpAddField(path);nuevo=true}
+  const save=$("#mp-pd2")?$("#mp-pd2").checked:true;MP.pdOn=save;
+  mpAssign(f,u,"mapeado a mano");let ok=true;if(save)ok=mpPredPut(f,u.name);
+  MP_MAP.path=path;mpRender();
+  $("#mp-msg").textContent=`${u.name} → ${path}${nuevo?" (dato agregado: la ficha no lo tenía)":""}${save?(ok?" · guardado como predeterminado":" · no se pudo guardar en este navegador"):""}.`;
+}
+$("#mp-table").addEventListener("click",e=>{
+  if(MP_TAB!=="map")return;const t=e.target;
+  const b=t.closest("button");
+  if(b&&b.dataset.u!=null){MP_MAP.u=+b.dataset.u;MP_MAP.path=null;MP_MAP.scrollJ=true;mpTable();return}
+  if(b&&b.dataset.mpage){MP_MAP.page=+b.dataset.mpage;mpTable();return}
+  if(b&&b.dataset.assign!=null){mpMapAssign(b.dataset.assign);return}
+  if(b&&b.dataset.goto!=null){const u=MP.units[+b.dataset.goto];MP_MAP.u=+b.dataset.goto;MP_MAP.path=null;MP_MAP.page=u.page||1;mpTable();return}
+  if(b&&b.dataset.unmap){const u=MP.units[MP_MAP.u];const f=u&&u.fichaId!=null?MP.fichaG[u.fichaId]:null;if(f){const save=$("#mp-pd2")?$("#mp-pd2").checked:true;mpAssign(f,null,"mapeo quitado a mano");if(save)mpPredPut(f,"-");mpRender();$("#mp-msg").textContent=`${u.name}: se quitó el mapeo de «${f.nombreWeb}».`}return}
+  if(b&&b.dataset.desel){MP_MAP.u=null;MP_MAP.path=null;mpTable();return}
+  const row=t.closest(".jrow");
+  if(row&&!b){const p=row.dataset.jpath;const f=MP.fichaG.find(g=>g.match&&!g.noCampo&&g.campoJson&&mpPathOf(g)===p);MP_MAP.path=p;MP_MAP.u=f?MP.units.indexOf(f.match.u):null;if(f)MP_MAP.page=f.match.u.page||MP_MAP.page;mpTable()}
+});
+$("#mp-table").addEventListener("change",e=>{if(MP_TAB==="map"&&e.target.id==="mp-vals"){MP_MAP.vals=e.target.checked;mpMapPage()}});
 </script>
 </body>
 </html>

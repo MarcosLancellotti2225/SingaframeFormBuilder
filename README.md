@@ -47,6 +47,7 @@ La plantilla de preguntas mantiene el formato v12 (las listas de Sección / Subs
 `mapear.html` (link en el encabezado de la página principal). Cuando el INS manda su matriz (la ficha en Excel), cruza la ficha con el PDF y el JSON main, la contrasta con el Diccionario INS y arma una matriz normalizada. Solo lee los archivos: no cambia el PDF.
 
 - **Cruce**: cada campo de la ficha con su casillero del PDF (por el texto impreso junto al casillero, el nombre del casillero, los sinónimos del diccionario y el tipo). Estados: SEGURO, DUDOSO, SIN_MATCH (la ficha nombra un casillero que no está), SIN_PDF (solo web / JSON), SIN_FICHA (casillero sin fila), NO_APLICA (títulos). Cada decisión dice por qué.
+- **Ver y mapear**: el PDF (pintado con los valores del JSON main y con cada casillero coloreado según su estado) al lado del JSON. Tocar un casillero muestra su dato; tocar un dato muestra su casillero; «← este casillero» mapea. Un dato que la ficha no tiene se agrega a mano.
 - **Resolver dudosos**: muestra la página del PDF con el casillero y los candidatos; un clic elige. Lo elegido queda como predeterminado de ese formulario en este navegador.
 - **Repeaters**: marca las listas (padecimientos[], intervencionQuirurgica[], direccion[], …) y cuántas filas tiene cada una en el PDF.
 - **Excel de salida**: hojas Matriz (ordenada por paso, sección y posición en el PDF), Huecos, Preguntas_INS (todas las filas de la ficha con su hoja y fila) y Resumen.
