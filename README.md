@@ -50,7 +50,7 @@ La plantilla de preguntas mantiene el formato v12 (las listas de Sección / Subs
 - **Ver y mapear**: el PDF (pintado con los valores del JSON main y con cada casillero coloreado según su estado) al lado del JSON. Tocar un casillero muestra su dato; tocar un dato muestra su casillero; «← este casillero» mapea. Un dato que la ficha no tiene se agrega a mano.
 - **Resolver dudosos**: muestra la página del PDF con el casillero y los candidatos; un clic elige. Lo elegido queda como predeterminado de ese formulario en este navegador.
 - **Repeaters**: marca las listas (padecimientos[], intervencionQuirurgica[], direccion[], …) y cuántas filas tiene cada una en el PDF.
-- **Excel de salida**: hojas Matriz (ordenada por paso, sección y posición en el PDF), Huecos, Preguntas_INS (todas las filas de la ficha con su hoja y fila) y Resumen.
+- **Bajar ficha (.xlsx)**: la misma ficha que baja el flujo principal (Portada, Formulario, Opciones, JSON del cliente, Casilleros PDF, Pendientes), armada con el resultado del cruce y en el orden de la matriz. Cada pregunta dice en «Notas» de qué hoja y fila de la ficha del INS sale.
 
 ## Privacidad
 

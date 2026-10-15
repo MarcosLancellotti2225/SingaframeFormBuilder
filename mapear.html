@@ -140,7 +140,7 @@ button.btn.sm{padding:3px 10px;font-size:13px}
 </section>
 
 <section class="card" id="mp-out" hidden aria-labelledby="mp-out-h">
-  <div class="bar" style="justify-content:space-between"><h2 id="mp-out-h" style="margin:0">Lo que se leyó</h2><button class="btn pri" id="mp-dl">Bajar matriz normalizada (.xlsx)</button></div>
+  <div class="bar" style="justify-content:space-between"><h2 id="mp-out-h" style="margin:0">Lo que se leyó</h2><button class="btn pri" id="mp-dl">Bajar ficha (.xlsx)</button></div>
   <div class="stats" id="mp-stats"></div>
   <ul class="warns" id="mp-warns" style="margin-top:10px"></ul>
   <div class="tabs" role="tablist" style="margin-top:14px">
@@ -165,7 +165,7 @@ button.btn.sm{padding:3px 10px;font-size:13px}
 <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
 <script>
 "use strict";
-const MP_VERSION="v1.6.0";
+const MP_VERSION="v1.7.0";
 const $=s=>document.querySelector(s);
 const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
 const slug=t=>String(t||"").toLowerCase().normalize("NFKD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"_").replace(/^_|_$/g,"");
@@ -729,48 +729,6 @@ function mpHuecos(){
   return H;
 }
 
-/* ════════ Excel de salida: Matriz · Huecos · Preguntas_INS · Resumen ════════ */
-const MP_MCOLS=[["orden",7],["paso_web",22],["seccion",22],["pagina_pdf",8],["widget_pdf",30],["tipo_widget",12],["grupo",24],["label_web",36],["control_web",14],["opciones",34],["path_json",48],["tipo_json",12],["mapeo_web_json",30],["obligatorio_web",10],["obligatorio_json",10],["regla",36],["repeater",30],["prefill",10],["estado_match",12],["confianza",9],["senal",60],["hoja",16],["filas",10],["ruta_dic",48],["estado_dic",14],["observaciones",48]];
-const MP_MHEAD={orden:"orden",paso_web:"paso_web",seccion:"seccion",pagina_pdf:"pagina_pdf",widget_pdf:"widget_pdf",tipo_widget:"tipo_widget",grupo:"grupo",label_web:"label_web",control_web:"control_web",opciones:"opciones (WEB → JSON · PDF)",path_json:"path_json",tipo_json:"tipo_json",mapeo_web_json:"mapeo_web_json",obligatorio_web:"obligatorio_web",obligatorio_json:"obligatorio_json",regla:"regla / visibilidad",repeater:"repeater",prefill:"prefill",estado_match:"estado_match",confianza:"confianza",senal:"señal (por qué)",hoja:"hoja_ficha_origen",filas:"fila_ficha_origen",ruta_dic:"ruta_diccionario",estado_dic:"estado_diccionario",observaciones:"observaciones"};
-const MP_FILL={SEGURO:"FFE2F3EA",DUDOSO:"FFFBEFDC",SIN_MATCH:"FFFBE6E4",SIN_PDF:"FFE9ECFB",SIN_FICHA:"FFFBE6E4",error:"FFFBE6E4",aviso:"FFFBEFDC",info:"FFE9ECFB"};
-async function mpXlsx(){
-  const M=mpOrder(),H=mpHuecos();
-  const wb=new ExcelJS.Workbook();wb.creator="Signaframe · Ordenar y mapear "+MP_VERSION;
-  const sheet=(name,cols,rows,colorKey)=>{
-    const ws=wb.addWorksheet(name,{views:[{state:"frozen",ySplit:1}]});
-    ws.columns=cols.map(([k,w,h])=>({header:h||k,key:k,width:w}));
-    const hr=ws.getRow(1);hr.font={bold:true,color:{argb:"FFFFFFFF"}};hr.fill={type:"pattern",pattern:"solid",fgColor:{argb:"FF1B1F2A"}};hr.alignment={vertical:"middle",wrapText:true};hr.height=30;
-    rows.forEach(r=>{const row=ws.addRow(r);row.alignment={vertical:"top",wrapText:true};const c=colorKey&&MP_FILL[r[colorKey]];if(c)row.getCell(colorKey).fill={type:"pattern",pattern:"solid",fgColor:{argb:c}}});
-    ws.autoFilter={from:{row:1,column:1},to:{row:1,column:cols.length}};return ws;
-  };
-  const mws=sheet("Matriz",MP_MCOLS.map(([k,w])=>[k,w,MP_MHEAD[k]]),M.map(r=>{const o={};MP_MCOLS.forEach(([k])=>o[k]=r[k]??"");return o}),"estado_match");
-  mws.getColumn("confianza").numFmt="0.00";
-  sheet("Huecos",[["tipo",30],["gravedad",10],["detalle",70],["hoja",16],["filas",10],["widget",30],["ruta",48],["sugerencia",50]],H,"gravedad");
-  /* todas las filas de la ficha, tal cual, con su hoja / fila y a dónde fueron */
-  const ofRow=new Map();MP.fichaG.forEach(f=>f.filas.forEach(n=>ofRow.set(f.hoja+"|"+n,f)));
-  const ordOf=new Map(M.filter(r=>r.f).map(r=>[r.f,r.orden]));
-  const K=Object.values(FICHA_COLS);
-  sheet("Preguntas_INS",[["hoja",16],["fila",6],...K.map(k=>[k,k==="campoJson"?44:18]),["estado_match",12],["widget_pdf",28],["orden_en_matriz",10]],
-    MP.ficha.rows.map(r=>{const f=ofRow.get(r.hoja+"|"+r.fila);const o={hoja:r.hoja,fila:r.fila};K.forEach(k=>o[k]=r[k]??"");o.estado_match=f?f.estado:"";o.widget_pdf=f&&f.match?f.match.u.name:"";o.orden_en_matriz=f&&ordOf.has(f)?ordOf.get(f):"";return o}),"estado_match");
-  const cnt=k=>M.filter(r=>r.estado_match===k).length;const nW=MP.pdf.fields.reduce((a,f)=>a+f.widgets.length,0);
-  const enM=new Set(M.flatMap(r=>r.widget_pdf?r.widget_pdf.split("\n"):[]));
-  const R=[["Herramienta",`Signaframe · Ordenar y mapear ${MP_VERSION}`],["Fecha",new Date().toISOString().slice(0,16).replace("T"," ")],
-    ["PDF",MP.files.pdf.name],["JSON main",MP.files.json.name],["Ficha del INS",MP.files.xlsx.name],["Diccionario INS",`${DIC.length} campos`],[],
-    ["Widgets del PDF",nW],["Widgets en la Matriz",MP.pdf.fields.filter(f=>enM.has(f.name)).length],["Campos del PDF (agrupados)",MP.units.length],
-    ["Filas de la ficha",MP.ficha.rows.length],["Campos de la ficha (agrupados)",MP.fichaG.length],["Filas en la Matriz",M.length],[],
-    ...["SEGURO","DUDOSO","SIN_MATCH","SIN_PDF","SIN_FICHA"].map(k=>[k,cnt(k)]),["NO_APLICA (solo en Preguntas_INS)",MP.fichaG.filter(f=>f.estado==="NO_APLICA").length],[],
-    ["Repeaters",mpRepeaters().map(r=>`${r.name}: ${r.campos.length} campos en la ficha · JSON ${r.json??"—"} · PDF ${r.filasPdf} fila(s)`).join("\n")||"—"],[],
-    ["Huecos: errores",H.filter(h=>h.gravedad==="error").length],["Huecos: avisos",H.filter(h=>h.gravedad==="aviso").length],["Huecos: info",H.filter(h=>h.gravedad==="info").length],[],
-    ["Orden","Paso WEB (orden de la ficha) → Sección (posición en el PDF) → página → arriba→abajo → izquierda→derecha; los datos solo JSON van al final de su sección; los datos del sistema, al final."],
-    ["Estados","SEGURO: cruce claro. DUDOSO: revisar. SIN_MATCH: la ficha nombra un casillero que no se encontró. SIN_PDF: la ficha no le da casillero (solo web / JSON). SIN_FICHA: casillero sin fila en la ficha. NO_APLICA: fila sin campo (títulos, «No aplica»)."]];
-  const rs=wb.addWorksheet("Resumen");rs.columns=[{width:36},{width:110}];R.forEach(r=>{const row=rs.addRow(r);row.alignment={vertical:"top",wrapText:true};if(r[0])row.getCell(1).font={bold:true}});
-  wb.views=[{activeTab:0}];
-  const buf=await wb.xlsx.writeBuffer();
-  const base=(MP.files.pdf.name||"formulario").replace(/\.pdf$/i,"");
-  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));a.download=`${base}_matriz_normalizada.xlsx`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
-  return{M,H};
-}
-
 /* ════════ UI ════════ */
 const inputs={pdf:"#mp-pdf",json:"#mp-json",xlsx:"#mp-xlsx"};
 Object.entries(inputs).forEach(([k,sel])=>$(sel).addEventListener("change",e=>{
@@ -798,7 +756,7 @@ document.querySelectorAll(".tabs button").forEach(b=>b.addEventListener("click",
 $("#mp-q").addEventListener("input",()=>mpTable());
 $("#mp-grp").addEventListener("change",()=>mpTable());
 $("#mp-est").addEventListener("change",()=>mpTable());
-$("#mp-dl").addEventListener("click",async()=>{const m=$("#mp-msg");try{const r=await mpXlsx();m.textContent=`Matriz bajada: ${r.M.length} filas · ${r.H.length} huecos.`}catch(e){console.warn(e);m.textContent="No se pudo armar el Excel."}});
+$("#mp-dl").addEventListener("click",async()=>{const m=$("#mp-msg");try{const r=await mpFichaXlsx();m.textContent=`Ficha bajada: ${r.S.length} secciones · ${r.rows.length} preguntas · ${r.pend.length} pendientes.`}catch(e){console.warn(e);m.textContent="No se pudo armar el Excel."}});
 function mpRender(){
   const P=MP.pdf,J=MP.json,F=MP.ficha;
   const byFt=P.fields.reduce((a,f)=>(a[f.ft]=(a[f.ft]||0)+1,a),{});
@@ -1057,6 +1015,155 @@ $("#mp-table").addEventListener("click",e=>{
   if(row&&!b){const p=row.dataset.jpath;const f=MP.fichaG.find(g=>g.match&&!g.noCampo&&g.campoJson&&mpPathOf(g)===p);MP_MAP.path=p;MP_MAP.u=f?MP.units.indexOf(f.match.u):null;if(f)MP_MAP.page=f.match.u.page||MP_MAP.page;mpTable()}
 });
 $("#mp-table").addEventListener("change",e=>{if(MP_TAB==="map"&&e.target.id==="mp-vals"){MP_MAP.vals=e.target.checked;mpMapPage()}});
+/* ════════ v1.7 · La ficha (.xlsx) del flujo principal: mismas hojas, columnas y colores que «Bajar ficha» de index.html ════════ */
+const MP_TIPOS=["Texto corto","Texto largo","Número","Importe","Porcentaje","Fecha","Hora","Email","Teléfono","Una opción de una lista","Varias opciones de una lista","Sí / No","Casilla de aceptación","Firma","Texto informativo"];
+const MP_DIC_TXT={ok:"Coincide",est:"Distinta (lista / objeto)",dif:"Distinta",sinruta:"Sin ruta",none:"No está"};
+const MP_SYS_SEC="Datos del sistema (oculto)";
+const mpTpl=p=>String(p||"").replace(/\[\]/g,"[i]");
+function mpTipo(f){
+  const c=(f.controlWeb||"").toLowerCase(),t=(f.tipoJson||"").toLowerCase(),n=slug(f.nombreWeb);
+  const sn=f.opciones.length&&f.opciones.every(o=>/^(s[ií]|no)$/i.test(o.label.trim()));
+  if(/informativ|texto info/.test(c))return"Texto informativo";
+  if(/check/.test(c))return"Casilla de aceptación";
+  if(/boolean/.test(t)&&(/radio|combo/.test(c)||sn))return"Sí / No";
+  if(/radio|combo|lista/.test(c))return sn?"Sí / No":"Una opción de una lista";
+  if(/fecha/.test(c)||/fecha/.test(t))return"Fecha";
+  if(/porcentaje/.test(c)||/porcentaje/.test(n))return"Porcentaje";
+  if(/num[eé]ric/.test(c)||/number/.test(t))return"Número";
+  if(/correo|email/.test(n))return"Email";
+  if(/telefono/.test(n))return"Teléfono";
+  if(/^detalle|detalles|complicaci|direccion_exacta/.test(n))return"Texto largo";
+  return"Texto corto";
+}
+function mpOrigen(f){
+  const v=f.visualizacion||"";
+  if(f.hoja===MP_MAN)return"La completa la persona";
+  if(mpIsJsonPaso(f.paso))return"Sistema (no se ve)";
+  if(/disabled/i.test(v))return"Prellenado bloqueado";
+  if(/prellen|llenado autom/i.test(v))return"Prellenado editable";
+  return"La completa la persona";
+}
+/* las preguntas en el orden de la Matriz; los datos del sistema van primero, en una sección oculta (como en el flujo principal) */
+function mpFichaModel(){
+  const M=mpOrder().filter(r=>r.f);
+  const sec=r=>r.f.ordPaso===MP_SYS?MP_SYS_SEC:r.f.ordPaso;
+  const sys=M.filter(r=>sec(r)===MP_SYS_SEC),web=M.filter(r=>sec(r)!==MP_SYS_SEC);
+  const rows=[...sys,...web];const S=[];
+  rows.forEach(r=>{const t=sec(r);let s=S.find(x=>x.title===t);if(!s){s={title:t,hidden:t===MP_SYS_SEC,rows:[]};S.push(s)}s.rows.push(r)});
+  let n=0;rows.forEach(r=>r.pid=`P-${String(++n).padStart(3,"0")}`);
+  return{S,rows};
+}
+async function mpFichaXlsx(){
+  const {S,rows}=mpFichaModel();const H=mpHuecos();
+  const C={blue:"FF1F4E79",blueL:"FFDCE8F5",amber:"FF9C5700",amberL:"FFFCEBD0",green:"FF17614A",greenL:"FFDDF1E7",gray:"FF4A5160",grayL:"FFEEF0F4",red:"FFB4231D",redL:"FFFBE3E1",ink:"FF1B1F2A",line:"FFD5D9E0",sec:"FF2B3245",white:"FFFFFFFF"};
+  const F=(argb)=>({type:"pattern",pattern:"solid",fgColor:{argb}});
+  const thin={style:"thin",color:{argb:C.line}};const BOX={top:thin,left:thin,bottom:thin,right:thin};
+  const font=(o)=>Object.assign({name:"Arial",size:10,color:{argb:C.ink}},o||{});
+  const wb=new ExcelJS.Workbook();wb.creator="Ficha de formulario · Ordenar y mapear "+MP_VERSION;wb.created=new Date();
+  const hdr=(ws,row,cols,fill)=>{cols.forEach((t,k)=>{const c=ws.getCell(row,k+1);c.value=t;c.font=font({bold:true,color:{argb:C.white}});c.fill=F(fill[k]||fill);c.alignment={vertical:"middle",wrapText:true};c.border=BOX});ws.getRow(row).height=30};
+  const band=(ws,row,c1,c2,text,fill)=>{ws.mergeCells(row,c1,row,c2);const c=ws.getCell(row,c1);c.value=text;c.font=font({bold:true,size:9,color:{argb:C.white}});c.fill=F(fill);c.alignment={horizontal:"center",vertical:"middle"}};
+  const stCell=(c,val)=>{const map={"Confirmado":[C.greenL,C.green],"Asignado":[C.greenL,C.green],"Unido":[C.greenL,C.green],"Sugerido":[C.amberL,C.amber],"Falta":[C.redL,C.red],"Libre":[C.redL,C.red],"Sin pregunta":[C.redL,C.red],"No aplica":[C.grayL,C.gray]};const s=map[val];c.value=val;if(s){c.fill=F(s[0]);c.font=font({bold:true,color:{argb:s[1]}})}c.alignment={horizontal:"center",vertical:"top"}};
+  const base=(MP.files.pdf.name||"formulario").replace(/\.pdf$/i,"");
+  /* lo que necesitan las hojas */
+  const J=mpJIndex();const fieldBy=new Map(MP.pdf.fields.map(x=>[x.name,x]));
+  const ownerOf=new Map();rows.forEach(r=>{if(r.u)r.u.miembros.forEach(m=>ownerOf.set(m,r))});
+  const pathOf=r=>r.f.json.st==="otra"?r.f.json.alt:mpPathN(r.f.campoJson);
+  const byPath=new Map();rows.forEach(r=>{const p=pathOf(r);if(p&&!byPath.has(p))byPath.set(p,r)});
+  const jState=r=>!r.f.campoJson?"Falta":r.f.json.st==="ok"?"Confirmado":"Sugerido";
+  const pdfState=r=>r.u?(r.f.estado==="DUDOSO"?"Sugerido":"Asignado"):r.f.esperaPdf?"Falta":"No aplica";
+  const boxes=r=>{if(!r.u)return"";const u=r.u;if(u.agrupado)return u.opciones.map(o=>`${o.widget} (${o.label})`).join("\n");return u.miembros.join("\n")};
+  const nW=MP.pdf.fields.length,nWu=MP.pdf.fields.filter(x=>ownerOf.has(x.name)).length;
+  const st={secs:S.length,preg:rows.length,cas:nW,casUsed:nWu,js:J.size,jsUsed:[...J.keys()].filter(k=>byPath.has(k)).length,sug:rows.filter(r=>jState(r)==="Sugerido"||pdfState(r)==="Sugerido").length};
+  /* Portada */
+  const p0=wb.addWorksheet("Portada",{views:[{showGridLines:false}],properties:{tabColor:{argb:C.blue}}});
+  p0.columns=[{width:3},{width:30},{width:60}];
+  p0.getCell("B2").value="Ficha de formulario";p0.getCell("B2").font=font({size:20,bold:true,color:{argb:C.blue}});
+  p0.getCell("B3").value=base;p0.getCell("B3").font=font({size:12,color:{argb:C.gray}});
+  p0.getCell("B4").value=`Generada el ${new Date().toLocaleDateString("es-ES")} desde la ficha del INS (${MP.files.xlsx.name}) con Ordenar y mapear ${MP_VERSION}`;p0.getCell("B4").font=font({italic:true,color:{argb:C.gray}});
+  let r=6;p0.getCell(`B${r}`).value="Resumen";p0.getCell(`B${r}`).font=font({bold:true,size:12,color:{argb:C.blue}});r++;
+  [["Secciones",st.secs],["Preguntas del formulario",st.preg],["Casilleros del PDF",`${st.casUsed} de ${st.cas} asignados`],["Datos del JSON del cliente",st.js?`${st.jsUsed} de ${st.js} unidos`:"Sin JSON"],["Uniones sugeridas sin confirmar",st.sug]].forEach(([a,b])=>{p0.getCell(`B${r}`).value=a;p0.getCell(`C${r}`).value=b;p0.getCell(`B${r}`).font=font({color:{argb:C.gray}});p0.getCell(`C${r}`).font=font({bold:true});[p0.getCell(`B${r}`),p0.getCell(`C${r}`)].forEach(c=>{c.border={bottom:thin}});r++});
+  r++;p0.getCell(`B${r}`).value="Colores";p0.getCell(`B${r}`).font=font({bold:true,size:12,color:{argb:C.blue}});r++;
+  [["Formulario","Lo que se le pregunta a la persona",C.blue],["PDF","Dónde se escribe cada respuesta",C.amber],["JSON","Cómo sale cada dato para su sistema",C.green],["Verde","Confirmado / asignado",C.green],["Amarillo","Sugerido, falta confirmar",C.amber],["Rojo","Falta o libre",C.red]].forEach(([a,b,col])=>{const c=p0.getCell(`B${r}`);c.value=a;c.fill=F(col);c.font=font({bold:true,color:{argb:C.white}});p0.getCell(`C${r}`).value=b;r++});
+  r++;p0.getCell(`B${r}`).value="Hojas";p0.getCell(`B${r}`).font=font({bold:true,size:12,color:{argb:C.blue}});r++;
+  [["Formulario","Secciones y preguntas, con su PDF y su JSON"],["Opciones","Opciones de cada lista, con código y casilla del PDF"],["JSON del cliente","Cada dato del JSON y la pregunta que lo llena"],["Casilleros PDF","Nombre original y nuevo de cada casillero"],["Pendientes","Lo que falta resolver"]].forEach(([a,b])=>{const c=p0.getCell(`B${r}`);c.value={text:a,hyperlink:`#'${a}'!A1`};c.font=font({color:{argb:"FF2F6FD6"},underline:true});p0.getCell(`C${r}`).value=b;r++});
+  /* Formulario */
+  const w1=wb.addWorksheet("Formulario",{views:[{state:"frozen",ySplit:2,xSplit:4}],properties:{tabColor:{argb:C.blue}}});
+  const cols1=[["ID",8],["Sección",22],["Subsección",18],["#",5],["Pregunta",34],["Tipo de respuesta",22],["Obligatoria",11],["Origen",20],["Se repite",10],["Se arma con / parte de",28],["Se muestra si",32],["Opciones",30],["Reglas / formato",22],["Valor o cálculo",18],["Se ve en el PDF",10],["Casilleros del PDF",42],["Estado PDF",12],["Ruta JSON",40],["Estado JSON",13],["Notas",28],["Ruta del diccionario",40],["Estado vs. diccionario",16]];
+  const NC=cols1.length;
+  w1.columns=cols1.map(([,w])=>({width:w}));
+  band(w1,1,1,14,"FORMULARIO",C.blue);band(w1,1,15,17,"PDF",C.amber);band(w1,1,18,19,"JSON",C.green);band(w1,1,20,20,"",C.gray);band(w1,1,21,22,"DICCIONARIO INS",C.blue);
+  hdr(w1,2,cols1.map(x=>x[0]),[...Array(14).fill(C.blue),C.amber,C.amber,C.amber,C.green,C.green,C.gray,C.blue,C.blue]);
+  let row=3;
+  S.forEach(s=>{
+    w1.mergeCells(row,1,row,NC);const sc=w1.getCell(row,1);sc.value=`${s.title}${s.hidden?"  ·  OCULTA (no se le muestra a la persona)":""}  ·  ${s.rows.length} preguntas`;sc.font=font({bold:true,color:{argb:C.white},size:11});sc.fill=F(s.hidden?C.gray:C.sec);w1.getRow(row).height=20;row++;
+    let k=0,cs=null;
+    s.rows.forEach(x=>{
+      const f=x.f;const sub=s.hidden?f.hoja:f.ordSec;
+      if(sub!==cs){cs=sub;if(cs){w1.mergeCells(row,1,row,NC);const uc=w1.getCell(row,1);uc.value=`   ${cs}`;uc.font=font({bold:true,color:{argb:C.sec}});uc.fill=F("FFE8ECF4");row++}}
+      k++;
+      const rep=mpRepOf(f,x.u);const nf=x.u&&x.u.repeater?x.u.repeater.filas.length:0;
+      const notas=[`INS: ${f.hoja}${f.filas.length?" fila "+f.filas.join(", "):""}`,f.observaciones?`Observaciones INS: ${f.observaciones}`:"",f.mapeo?`Mapeo WEB → JSON: ${f.mapeo}`:"",
+        f.json.st==="otra"?`La ficha dice ${f.campoJson}; en el JSON main está como ${f.json.alt}`:f.json.st==="no"?"La ruta de la ficha no está en el JSON main":"",
+        f.estado==="DUDOSO"||f.estado==="SIN_MATCH"||f.manual?`Cruce ${f.estado}: ${f.senal}`:"",f.ordNota||""].filter(Boolean).join("\n");
+      const ds=f.dic;
+      const vals=[x.pid,s.title,s.hidden?f.hoja:(f.ordSec||""),k,f.nombreWeb||f.nombrePdf,mpTipo(f),/^s[ií]/i.test(f.oblWeb||"")?"Sí":"No",mpOrigen(f),rep?(nf>1?`Sí (${nf})`:"Sí"):"No","",
+        "",(f.opcMap||f.opciones).filter(o=>!o.soloPdf).map(o=>o.label+(o.jsonValue?` = ${o.jsonValue}`:"")).join("\n"),f.regla||"","",x.u||f.esperaPdf?"Sí":"No",boxes(x),"",mpTpl(pathOf(x)||f.campoJson),"",notas,ds.i>=0?mpTpl(DIC[ds.i][4]):"",MP_DIC_TXT[ds.st]];
+      vals.forEach((v,c)=>{const cell=w1.getCell(row,c+1);cell.value=v;cell.font=font({});cell.border=BOX;cell.alignment={vertical:"top",wrapText:true};if(k%2===0)cell.fill=F("FFF7F8FA")});
+      stCell(w1.getCell(row,17),pdfState(x));
+      stCell(w1.getCell(row,19),jState(x));
+      w1.getCell(row,16).font=font({name:"Consolas",size:9});w1.getCell(row,18).font=font({name:"Consolas",size:9});
+      w1.getCell(row,6).dataValidation={type:"list",allowBlank:true,formulae:[`"${MP_TIPOS.join(",").replace(/"/g,"")}"`]};
+      w1.getCell(row,7).dataValidation={type:"list",allowBlank:true,formulae:['"Sí,No,—"']};
+      row++;
+    });
+  });
+  w1.autoFilter={from:{row:2,column:1},to:{row:2,column:NC}};
+  /* Opciones */
+  const w2=wb.addWorksheet("Opciones",{views:[{state:"frozen",ySplit:1}],properties:{tabColor:{argb:C.blue}}});
+  w2.columns=[{width:8},{width:30},{width:8},{width:30},{width:14},{width:40}];
+  hdr(w2,1,["ID","Pregunta","Orden","Opción (como se ve)","Código","Casilla del PDF"],[C.blue,C.blue,C.blue,C.blue,C.blue,C.amber]);
+  let r2=2;rows.forEach(x=>{const os=(x.f.opcMap||x.f.opciones).filter(o=>!o.soloPdf);os.forEach((o,k)=>{[x.pid,x.f.nombreWeb,k+1,o.label,o.jsonValue||"",o.widget||(o.pdfValue&&x.u?o.pdfValue:"")||"— sin casilla —"].forEach((v,c)=>{const cell=w2.getCell(r2,c+1);cell.value=v;cell.font=font();cell.border=BOX;cell.alignment={vertical:"top"}});if(!o.widget)w2.getCell(r2,6).font=font({color:{argb:C.red}});r2++})});
+  if(r2===2){w2.getCell("A2").value="No hay preguntas con opciones.";w2.getCell("A2").font=font({italic:true,color:{argb:C.gray}})}
+  w2.autoFilter={from:{row:1,column:1},to:{row:1,column:6}};
+  /* JSON del cliente */
+  const w3=wb.addWorksheet("JSON del cliente",{views:[{state:"frozen",ySplit:1}],properties:{tabColor:{argb:C.green}}});
+  w3.columns=[{width:46},{width:28},{width:11},{width:34},{width:15}];
+  hdr(w3,1,["Ruta","Valor de ejemplo","Se repite","Pregunta que lo llena","Estado"],[C.green,C.green,C.green,C.blue,C.green]);
+  [...J.entries()].forEach(([k,p],i)=>{const q=byPath.get(k);const rr=i+2;[mpTpl(k),typeof p.ex==="string"?p.ex:JSON.stringify(p.ex),mpRepArr(k)?"Sí":"No",q?`${q.pid} ${q.f.nombreWeb}`:"— sin pregunta —"].forEach((v,c)=>{const cell=w3.getCell(rr,c+1);cell.value=v;cell.font=font(c===0?{name:"Consolas",size:9}:{});cell.border=BOX});stCell(w3.getCell(rr,5),q?(jState(q)==="Confirmado"?"Unido":"Sugerido"):"Sin pregunta")});
+  if(!J.size){w3.getCell("A2").value="No se cargó un JSON del cliente.";w3.getCell("A2").font=font({italic:true,color:{argb:C.gray}})}
+  w3.autoFilter={from:{row:1,column:1},to:{row:1,column:5}};
+  /* Casilleros PDF (este paso no renombra: el nombre original y el nuevo son el mismo) */
+  const w4=wb.addWorksheet("Casilleros PDF",{views:[{state:"frozen",ySplit:1}],properties:{tabColor:{argb:C.amber}}});
+  w4.columns=[{width:8},{width:22},{width:42},{width:10},{width:34},{width:12}];
+  hdr(w4,1,["Página","Nombre original","Nombre nuevo","Tipo","Pregunta","Estado"],[C.amber,C.amber,C.amber,C.amber,C.blue,C.amber]);
+  const pdfOrd=MP.pdf.fields.slice().sort((a,b)=>(a.page-b.page)||((b.rect?Math.max(b.rect[1],b.rect[3]):0)-(a.rect?Math.max(a.rect[1],a.rect[3]):0))||((a.rect?a.rect[0]:0)-(b.rect?b.rect[0]:0)));
+  pdfOrd.forEach((x,k)=>{const q=ownerOf.get(x.name);const rr=k+2;[x.page,x.name,x.name,x.tipo==="radio"?"opción":x.tipo,q?`${q.pid} ${q.f.nombreWeb}`:"— libre —"].forEach((v,c)=>{const cell=w4.getCell(rr,c+1);cell.value=v;cell.font=font(c===1||c===2?{name:"Consolas",size:9}:{});cell.border=BOX});stCell(w4.getCell(rr,6),q?"Asignado":"Libre")});
+  w4.autoFilter={from:{row:1,column:1},to:{row:1,column:6}};
+  /* Pendientes: lo mismo que el flujo principal + lo que encontró el cruce */
+  const w5=wb.addWorksheet("Pendientes",{views:[{state:"frozen",ySplit:1}],properties:{tabColor:{argb:C.red}}});
+  w5.columns=[{width:30},{width:60},{width:14}];
+  hdr(w5,1,["Qué","Detalle","Estado"],[C.red,C.red,C.red]);
+  const pend=[];
+  rows.forEach(x=>{const f=x.f;
+    if(!x.u&&f.esperaPdf)pend.push(["Pregunta sin casillero en el PDF",`${x.pid} ${f.nombreWeb} (la ficha dice «${f.nombrePdf}»)`]);
+    if(!f.campoJson)pend.push(["Pregunta sin dato del JSON",`${x.pid} ${f.nombreWeb}`]);
+    if(f.estado==="DUDOSO")pend.push(["Casillero sugerido sin confirmar",`${x.pid} ${f.nombreWeb} ↔ ${x.u.name}: ${f.senal}`]);
+    if(f.json.st==="otra")pend.push(["Unión sugerida sin confirmar",`${x.pid} ${f.nombreWeb} ↔ ${f.json.alt} (la ficha dice ${f.campoJson})`]);
+    if(f.json.st==="no")pend.push(["Ruta de la ficha que no está en el JSON",`${x.pid} ${f.nombreWeb} ↔ ${f.campoJson}`]);
+    if(/opción|Sí \/ No/.test(mpTipo(f))&&!(f.opcMap||f.opciones).length)pend.push(["Lista sin opciones",`${x.pid} ${f.nombreWeb}`]);
+    (f.opcMap||[]).forEach(o=>{if(o.soloPdf)pend.push(["Casilla sin opción en la ficha",`${x.pid} ${f.nombreWeb}: ${o.widget}`]);else if(!o.pdfValue)pend.push(["Opción sin casilla en el PDF",`${x.pid} ${f.nombreWeb}: ${o.label}`])});
+    if(f.dic.st==="dif")pend.push(["Distinto al Diccionario INS",`${x.pid} ${f.nombreWeb}: diccionario ${DIC[f.dic.i][4]}`]);
+  });
+  pdfOrd.forEach(x=>{if(!ownerOf.has(x.name))pend.push(["Casillero del PDF sin pregunta",x.name])});
+  J.forEach((p,k)=>{if(!byPath.has(k))pend.push(["Dato del JSON sin pregunta",k])});
+  H.filter(h=>h.tipo==="Repeater").forEach(h=>pend.push(["Repeater",h.detalle]));
+  pend.forEach((p,k)=>{const rr=k+2;p.forEach((v,c)=>{const cell=w5.getCell(rr,c+1);cell.value=v;cell.font=font();cell.border=BOX;cell.alignment={vertical:"top",wrapText:true}});const c3=w5.getCell(rr,3);c3.value="Abierto";c3.dataValidation={type:"list",allowBlank:true,formulae:['"Abierto,Resuelto,No aplica"']};c3.border=BOX;c3.font=font({bold:true,color:{argb:C.red}})});
+  if(!pend.length){w5.getCell("A2").value="Nada pendiente.";w5.getCell("A2").font=font({bold:true,color:{argb:C.green}})}
+  w5.addConditionalFormatting({ref:`C2:C${Math.max(2,pend.length+1)}`,rules:[{type:"cellIs",operator:"equal",formulae:['"Resuelto"'],style:{font:{color:{argb:C.green},bold:true},fill:F(C.greenL)}}]});
+  const buf=await wb.xlsx.writeBuffer();
+  const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([buf],{type:"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"}));a.download=`${base}_ficha.xlsx`;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1000);
+  return{rows,pend,S};
+}
 </script>
 </body>
 </html>
